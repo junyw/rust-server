@@ -22,15 +22,15 @@ fn main() {
   //let mut changes = vec![tcpEvent(listener.as_raw_fd() as usize)];
   //let listener = TcpListener::bind("127.0.0.1:8000").unwrap();
   //let t_event = tcpEvent(listener.as_raw_fd() as usize);
-  let tcp_event = Event::new_tcp_event(listener.as_raw_fd() as usize);
-  let timer_event1 = Event::new_timer_event(1, 1000);
-  let timer_event2 = Event::new_timer_event(2, 1000);
-  let timer_event3 = Event::new_timer_event(3, 1000);
+  let mut tcp_event = Event::new_tcp_event(listener.as_raw_fd() as usize);
+  let mut timer_event1 = Event::new_timer_event(1, 1000);
+  let mut timer_event2 = Event::new_timer_event(2, 1000);
+  let mut timer_event3 = Event::new_timer_event(3, 1000);
   //let mut changes = vec![event(1, 1000), event(2, 1500)];
-  event_loop.register(tcp_event);
-  event_loop.register(timer_event1);
-  event_loop.register(timer_event2);
-  event_loop.register(timer_event3);
+  event_loop.register(&mut tcp_event);
+  event_loop.register(&mut timer_event1);
+  event_loop.register(&mut timer_event2);
+  event_loop.register(&mut timer_event3);
   //event_loop.register_changes(changes);
   let mut server = Server::new();
   loop {
@@ -43,7 +43,7 @@ pub struct Server {
 }
 impl Handler for Server {
     fn ready(&self, id:RawFd) {
-      println!("handler ready: do nothing. id is {}", id);
+      println!("handler ready: id is {}", id);
     } 
 }
 impl Server {
@@ -52,10 +52,6 @@ impl Server {
 
     }
   }
-  fn say(self) {
-    println!("handler is here!");
-  }
-
 }
 
 // fn main() {

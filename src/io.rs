@@ -21,7 +21,7 @@ nix defined a KEvent structure:
    }
 */
 use nix::sys::event::{KEvent, kqueue, kevent, EventFilter, FilterFlag};
-use nix::sys::event::{EV_ADD, EV_ENABLE};
+use nix::sys::event::{EV_ADD, EV_ENABLE, EV_DELETE};
 use std::os::unix::io::RawFd;
 
 use std::os::unix::io::AsRawFd;
@@ -51,9 +51,10 @@ impl EventLoop {
 		})
 	}
 
-	pub fn register(&self, event:Event) {
+	pub fn register(&self, event: &mut Event) {
 		//println!("register: {}", event.kevent.ident);
 	    //let changes = vec![event.kevent];
+	    event.ev_set_add();
 	    let changes = vec![event.kevent];
 	    println!("self.kqueue is {}", self.kqueue);
 		match kevent(self.kqueue, &changes, &mut [], 0) {
@@ -70,8 +71,14 @@ impl EventLoop {
 	pub fn reregister() {
 		//TO DO: implement me.
 	}
-	pub fn deregister() {
+	pub fn deregister(&self, event: &mut Event) {
 		//TO DO: implement me.
+		event.ev_set_delete();
+		let changes = vec![event.kevent];
+		match kevent(self.kqueue, &changes, &mut [], 0) {
+			Ok(v) => (),
+			_ => ()
+		}
 	}
 	pub fn run<H: Handler>(&mut self, handler: &mut H) {
 		self.poll(handler);
@@ -112,6 +119,12 @@ pub struct Event {
 	kevent: KEvent,
 }
 impl Event {
+	fn ev_set_add(&mut self) {
+		self.kevent.flags = EV_ADD | EV_ENABLE;
+	}
+	fn ev_set_delete(&mut self) {
+		self.kevent.flags = EV_DELETE;
+	}
 	pub fn new_tcp_event(id:usize) -> Event {
 		println!("new_tcp_event: {}", id);
 		let new_event = KEvent {
