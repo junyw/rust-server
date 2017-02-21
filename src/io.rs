@@ -33,7 +33,7 @@ use std::io;
 use std::net::{TcpListener, TcpStream};
 
 pub trait Handler {
-    fn ready(&self, id:RawFd);
+    fn ready(&mut self, id:RawFd, event_loop : &mut EventLoop);
 }
 
 const MAX_EVENT_COUNT : usize = 1024;
@@ -94,7 +94,7 @@ impl EventLoop {
 	        println!("poll triggered......");
 	        for i in 0..v {
 	          println!("Event with ID {:?} triggered", self.evList.get(i).unwrap().ident);
-	          handler.ready(self.evList.get(i).unwrap().ident as i32);
+	          handler.ready(self.evList.get(i).unwrap().ident as i32, self);
 	          // since we have a connection, accept it and start a stream
 	          // the problem is we don't know which event it corresponds to 
 	          
