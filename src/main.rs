@@ -18,14 +18,14 @@ use std::collections::HashMap;
 use std::net::{TcpListener, TcpStream};
 extern crate tinyIO;
 //use tinyIO::tcpEvent;
-use tinyIO::io::{EventLoop, Event, Handler};
+use tinyIO::io::{EventLoop, Event, Handler, Identifier, Interest};
 fn main() {
   
   let mut event_loop : EventLoop= EventLoop::new().unwrap();
   let listener = TcpListener::bind("127.0.0.1:1300").unwrap();
-
+  let identifier = Identifier::new(listener.as_raw_fd(), Interest::Read);
   //let mut tcp_event = Event::new_tcp_event(&listener);
-  event_loop.register_socket(& listener);
+  event_loop.register(&identifier);
 
   let mut server = Server::new(listener);
   loop {
@@ -59,7 +59,9 @@ impl Server {
       Ok((socket, addr)) => {
         println!("new client: {:?}", addr);
         //let mut tcp_stream = Event::new_tcp_stream(&socket);
-        event_loop.register_socket(&socket);
+        let identifier = Identifier::new(socket.as_raw_fd(), Interest::Read);
+
+        event_loop.register(&identifier);
         let client = Client::new(socket.as_raw_fd(), socket);
         //self.handle_request(&socket);
         self.connections.insert(client.as_raw_fd(), client);
@@ -86,34 +88,22 @@ impl Server {
     //   }
     // }
 
-    let mut message: Message = self.connections.get_mut(&id).unwrap().get_message(&id, &event.get_data());
-    message.print();
+    //message.print();
     //add message to client's send_queue
-    self.connections.get_mut(&id).unwrap().send_message(message);
-    
-    event_loop.deregister_fildes(&id);
+    if(event.is_readable()) {
+      let mut message: Message = self.connections.get_mut(&id).unwrap().get_message(&id, &event.get_data());
 
-    event_loop.register_fildes_for_writing(&id);
+      self.connections.get_mut(&id).unwrap().send_message(message);
 
+      let identifier = Identifier::new(id, Interest::Read);
+      event_loop.deregister(&identifier);
 
-  }
-  fn handle_request(&self, stream: &TcpStream) {
-    let mut reader = BufReader::new(stream);
+      let identifier2 = Identifier::new(id, Interest::Write);
 
-    for line in reader.by_ref().lines() {
-      let one_line = line.unwrap();
-      println!("{}", one_line);
-      if one_line == "" {
-            break;
-      }
+      event_loop.register(&identifier2);
     }
-    self.send_response(reader.into_inner());
-  }
 
-  fn send_response(&self, mut stream: &TcpStream) {
-      // Write the header and the html body
-      let response = "HTTP/1.1 200 OK\n\n<html><body>Hello, World!</body></html>";
-      stream.write_all(response.as_bytes()).unwrap();
+
   }
 }
 impl Handler for Server {
@@ -142,10 +132,13 @@ impl Handler for Server {
         } 
         else if (event.is_writable()) {
           println!("event {} is writable", id);
+
           self.connections.get_mut(&id).unwrap().write_message();
           // deregister from event_loop
           // TODO: also remove from connections
-          event_loop.deregister_fildes_write(&id);
+          let identifier = Identifier::new(id, Interest::Write);
+
+          event_loop.deregister(&identifier);
 
         } 
       }
@@ -181,9 +174,16 @@ impl Client {
       self.send_queue.push(message);
     }
     pub fn write_message(&mut self) -> () {
-      let mut message: Message = self.send_queue.pop().unwrap();
-      let mut buf:Vec<u8> = message.buf;
-      self.socket.write(&buf[..]);
+      match self.send_queue.pop() {
+        Some(message) => {
+          let mut buf:Vec<u8> = message.buf;
+          self.socket.write(&buf[..]);
+        }
+        None => (),
+      }
+      // let mut message: Message = self.send_queue.pop().unwrap();
+      // let mut buf:Vec<u8> = message.buf;
+      // self.socket.write(&buf[..]);
     }
 }
 struct Message {

@@ -30,7 +30,36 @@ use std::io::{Read, Write, BufReader, BufRead};
 use std::io;
 // sockets
 use std::net::{TcpListener, TcpStream};
-
+pub enum Interest {
+    Read,
+    Write,
+}
+pub struct Identifier {
+	fd: RawFd,
+	filter: Interest,
+}
+impl Identifier {
+	pub fn new(fd: RawFd, interest: Interest) -> Identifier {
+		Identifier {
+			fd: fd,
+			filter: interest,
+		}
+	}
+	pub fn get_fd(&self) -> RawFd {
+		self.fd
+	}
+	pub fn readable(&self) -> bool {
+		match self.filter {
+			Interest::Read => true,
+			_ => false,
+		}
+	}
+	pub fn writable(&self) -> bool {
+		match self.filter {
+			Interest::Write => true,
+			_ => false,
+		}	}
+}
 pub trait Handler {
     fn ready(&mut self, id:RawFd, event : Event, event_loop : &mut EventLoop);
 }
@@ -50,42 +79,50 @@ impl EventLoop {
 			evList: vec![Event::new_timer_event(0,0).kevent; MAX_EVENT_COUNT],
 		})
 	}
-
-	pub fn register(&self, event: &mut Event) {
-		//println!("register: {}", event.kevent.ident);
-	    //let changes = vec![event.kevent];
-	    event.ev_set_add();
-	    let changes = vec![event.kevent];
-	    println!("self.kqueue is {}", self.kqueue);
+	pub fn register(&self, identifier: &Identifier) {
+		let mut event = Event::new(&identifier);
+		let changes = vec![event.kevent];
+		println!("self.kqueue is {}", self.kqueue);
 		match kevent(self.kqueue, &changes, &mut [], 0) {
 			Ok(v) => println!("kevent returns: {}", v),
 			_ => ()
 		}
 	}
-	pub fn register_for_writing(&self, event: &mut Event) {
-		//println!("register: {}", event.kevent.ident);
-	    //let changes = vec![event.kevent];
-	    event.ev_set_write();
-	    let changes = vec![event.kevent];
-	    println!("self.kqueue is {}", self.kqueue);
-		match kevent(self.kqueue, &changes, &mut [], 0) {
-			Ok(v) => println!("kevent returns: {}", v),
-			_ => ()
-		}
-	}
-	pub fn register_socket<T: AsRawFd>(&self, socket: &T) {
-		let mut event: Event = Event::new_socket_event(socket);
-		self.register(&mut event);
-	}
-    pub fn register_fildes_for_writing(&self, id: &RawFd) {
-		let mut event = Event::new_event(&id);
-		self.register_for_writing(&mut event);
-	}
+	// pub fn register(&self, event: &mut Event) {
+	// 	//println!("register: {}", event.kevent.ident);
+	//     //let changes = vec![event.kevent];
+	//     event.ev_set_add();
+	//     let changes = vec![event.kevent];
+	//     println!("self.kqueue is {}", self.kqueue);
+	// 	match kevent(self.kqueue, &changes, &mut [], 0) {
+	// 		Ok(v) => println!("kevent returns: {}", v),
+	// 		_ => ()
+	// 	}
+	// }
+	// pub fn register_for_writing(&self, event: &mut Event) {
+	// 	//println!("register: {}", event.kevent.ident);
+	//     //let changes = vec![event.kevent];
+	//     event.ev_set_write();
+	//     let changes = vec![event.kevent];
+	//     println!("self.kqueue is {}", self.kqueue);
+	// 	match kevent(self.kqueue, &changes, &mut [], 0) {
+	// 		Ok(v) => println!("kevent returns: {}", v),
+	// 		_ => ()
+	// 	}
+	// }
+	// pub fn register_socket<T: AsRawFd>(&self, socket: &T) {
+	// 	let mut event: Event = Event::new_socket_event(socket);
+	// 	self.register(&mut event);
+	// }
+ //    pub fn register_fildes_for_writing(&self, id: &RawFd) {
+	// 	let mut event = Event::new_event(&id);
+	// 	self.register_for_writing(&mut event);
+	// }
 	pub fn reregister() {
 		//TO DO: implement me.
 	}
-	pub fn deregister(&self, event: &mut Event) {
-		//TO DO: implement me.
+	pub fn deregister(&self, id: &Identifier) {
+		let mut event = Event::new(&id);
 		event.ev_set_delete();
 		let changes = vec![event.kevent];
 		match kevent(self.kqueue, &changes, &mut [], 0) {
@@ -94,18 +131,18 @@ impl EventLoop {
 		}
 	}
 	// avoid borrowing
-	pub fn deregister_fildes(&self, id: &RawFd) {
-		let mut event = Event::new_event(&id);
-		self.deregister(&mut event);
-	}
-	pub fn deregister_fildes_write(&self, id: &RawFd) {
-		let mut event = Event::new_event_write(&id);
-		self.deregister(&mut event);
-	}
-	pub fn deregister_socket<T:AsRawFd>(&self, socket: &T) {
-		let mut event = Event::new_socket_event(socket);
-		self.deregister(&mut event);
-	}
+	// pub fn deregister_fildes(&self, id: &RawFd) {
+	// 	let mut event = Event::new_event(&id);
+	// 	self.deregister(&mut event);
+	// }
+	// pub fn deregister_fildes_write(&self, id: &RawFd) {
+	// 	let mut event = Event::new_event_write(&id);
+	// 	self.deregister(&mut event);
+	// }
+	// pub fn deregister_socket<T:AsRawFd>(&self, socket: &T) {
+	// 	let mut event = Event::new_socket_event(socket);
+	// 	self.deregister(&mut event);
+	// }
 
 	pub fn run<H: Handler>(&mut self, handler: &mut H) {
 		self.poll(handler);
@@ -128,7 +165,7 @@ impl EventLoop {
 				//     writeable_fd(evi.ident);
 	          println!("Event with ID {:?} triggered", self.evList.get(i).unwrap().ident);
 	          handler.ready(self.evList.get(i).unwrap().ident as i32,
-	          	Event::new(self.evList[i]), 
+	          	Event::new_from_kevent(self.evList[i]), 
 	          	self);
 	          // since we have a connection, accept it and start a stream
 	          // the problem is we don't know which event it corresponds to 
@@ -154,11 +191,28 @@ pub struct Event {
 	kevent: KEvent,
 }
 impl Event {
-	fn new(kevent: KEvent) -> Event {
+	fn new(id: &Identifier) -> Event {
+		let mut kevent = Event::new_kevent(&id.get_fd());
+		if(id.readable()) {
+			kevent.filter = EventFilter::EVFILT_READ;
+			Event {
+	 	      kevent: kevent,
+		    }
+		} else if (id.writable()) {
+			kevent.filter = EventFilter::EVFILT_WRITE;
+			Event {
+	 	      kevent: kevent,
+		    }
+		} else {
+			panic!("");
+		}
+   		
+	} 
+	fn new_from_kevent(kevent: KEvent) -> Event {
 		Event {
 			kevent: kevent,
 		}
-	} 
+	}
 
 	pub fn get_data(&self) -> u32 {
 		self.kevent.data as u32
@@ -186,8 +240,8 @@ impl Event {
 	fn ev_set_delete(&mut self) {
 		self.kevent.flags = EV_DELETE;
 	}
-	fn new_event(id: & RawFd) -> Event {
-		let new_event = KEvent {
+	fn new_kevent(id: & RawFd) -> KEvent {
+		KEvent {
 	        ident: *id as usize, 
 	        filter: EventFilter::EVFILT_READ,
 	        //flags: EV_ADD | EV_ENABLE,
@@ -196,10 +250,7 @@ impl Event {
 	        fflags: FilterFlag::empty(),
 	        data: 0,
 	        udata: 0,
-	    };
-		Event {
-			kevent: new_event,
-		}
+	    }
 	}
 	fn new_event_write(id: & RawFd) -> Event {
 		let new_event = KEvent {
