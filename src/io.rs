@@ -21,10 +21,9 @@ nix defined a KEvent structure:
    }
 */
 use nix::sys::event::{KEvent, kqueue, kevent, EventFilter, FilterFlag};
-use nix::sys::event::{EV_ADD, EV_ENABLE, EV_DELETE};
-use std::os::unix::io::RawFd;
-
-use std::os::unix::io::AsRawFd;
+use nix::sys::event::{EV_ADD, EV_ENABLE, EV_DELETE, EV_CLEAR, EV_ONESHOT, EV_ERROR};
+use std::os::unix::io::{AsRawFd, RawFd};
+use std::ops::BitAnd;
 // Read
 // IO of the stream
 use std::io::{Read, Write, BufReader, BufRead};
@@ -33,12 +32,13 @@ use std::io;
 use std::net::{TcpListener, TcpStream};
 
 pub trait Handler {
-    fn ready(&mut self, id:RawFd, event_loop : &mut EventLoop);
+    fn ready(&mut self, id:RawFd, event : Event, event_loop : &mut EventLoop);
 }
 
 const MAX_EVENT_COUNT : usize = 1024;
 pub struct EventLoop {
 	kqueue: RawFd,
+	// evList is used for retrival
 	evList: Vec<KEvent>,
 }
 impl EventLoop {
@@ -62,12 +62,11 @@ impl EventLoop {
 			_ => ()
 		}
 	}
-	pub fn register_changes(&self, changes: Vec<KEvent>) {
-		match kevent(self.kqueue, &changes, &mut [], 0) {
-			Ok(v) => println!("kevent returns: {}", v),
-			_ => ()
-		}
+	pub fn register_socket<T: AsRawFd>(&self, socket: &T) {
+		let mut event: Event = Event::new_socket_event(socket);
+		self.register(&mut event);
 	}
+
 	pub fn reregister() {
 		//TO DO: implement me.
 	}
@@ -80,6 +79,11 @@ impl EventLoop {
 			_ => ()
 		}
 	}
+	pub fn deregister_socket<T:AsRawFd>(&self, socket: &T) {
+		let mut event = Event::new_socket_event(socket);
+		self.deregister(&mut event);
+	}
+
 	pub fn run<H: Handler>(&mut self, handler: &mut H) {
 		self.poll(handler);
 	}
@@ -90,11 +94,19 @@ impl EventLoop {
 	  //changes.push(event(0,0));
 	  //changes.push(event(0,0));
       match kevent(self.kqueue, &[], self.evList.as_mut_slice(), 0) {
-	      Ok(v) if v > 0 => {
+	      Ok(n) if n > 0 => {
 	        println!("poll triggered......");
-	        for i in 0..v {
+	        for i in 0..n {
+				// if (evi.flags & EV_ERROR)
+				//     /* error */
+				// if (evi.filter == EVFILT_READ)
+				//     readable_fd(evi.ident);
+				// if (evi.filter == EVFILT_WRITE)
+				//     writeable_fd(evi.ident);
 	          println!("Event with ID {:?} triggered", self.evList.get(i).unwrap().ident);
-	          handler.ready(self.evList.get(i).unwrap().ident as i32, self);
+	          handler.ready(self.evList.get(i).unwrap().ident as i32,
+	          	Event::new(self.evList[i]), 
+	          	self);
 	          // since we have a connection, accept it and start a stream
 	          // the problem is we don't know which event it corresponds to 
 	          
@@ -107,8 +119,8 @@ impl EventLoop {
 	          //} 
 	        }
 	      }
-	      Ok(0) => {
-	      	//println!("poll results in 0.");
+	      Ok(n) if n <= 0 => {
+	      	//error or time out
 	      }
 	      Err(e) => panic!("{:?}", e), // Panic on Errors
 	      _ => () // Ignore Ok(0),
@@ -119,18 +131,42 @@ pub struct Event {
 	kevent: KEvent,
 }
 impl Event {
+	fn new(kevent: KEvent) -> Event {
+		Event {
+			kevent: kevent,
+		}
+	} 
+
+	pub fn get_data(&self) -> u32 {
+		self.kevent.data as u32
+	}
+	pub fn is_readable(&self) -> bool {
+		self.kevent.filter == EventFilter::EVFILT_READ
+	}		
+
+	pub fn is_writable(&self) -> bool {
+		self.kevent.filter == EventFilter::EVFILT_WRITE
+	}
+	pub fn is_error(&self) -> bool {
+		(self.kevent.flags.bits() & EV_ERROR.bits()) == EV_ERROR.bits()
+	}
+	pub fn is_hup(&self)  {
+		//TODO: implement me
+	}
 	fn ev_set_add(&mut self) {
 		self.kevent.flags = EV_ADD | EV_ENABLE;
 	}
 	fn ev_set_delete(&mut self) {
 		self.kevent.flags = EV_DELETE;
 	}
-	pub fn new_tcp_event(id:usize) -> Event {
-		println!("new_tcp_event: {}", id);
+	pub fn new_socket_event<T: AsRawFd>(listener: & T) -> Event {
+		println!("new_tcp_event: {}", listener.as_raw_fd());
 		let new_event = KEvent {
-	        ident: id, 
+	        ident: listener.as_raw_fd() as usize, 
 	        filter: EventFilter::EVFILT_READ,
-	        flags: EV_ADD | EV_ENABLE,
+	        //flags: EV_ADD | EV_ENABLE,
+	        // EV_CLEAR for edge, EV_ONESHOT for oneshot
+	        flags: EV_ADD | EV_ENABLE ,
 	        fflags: FilterFlag::empty(),
 	        data: 0,
 	        udata: 0,
@@ -139,14 +175,13 @@ impl Event {
 			kevent: new_event,
 		}
 	}
-
 	pub fn new_timer_event(id: usize, timer: isize) -> Event {
 		// helper function to create a new Event
 		// this is a timer event
 		// id is a value used to identify the event.
 		// timer is a timer in milliseconds.
 		// EV_ADD | EV_ENABLE indicates we want to add and enable the timer at the same time.
-		println!("new_tcp_event: {}", id);
+		println!("new_timer_event: {}", id);
 		let new_event = KEvent {
 	        ident: id, 
 	        filter: EventFilter::EVFILT_TIMER,

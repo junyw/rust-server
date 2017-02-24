@@ -19,7 +19,7 @@ fn main() {
 
   let mut timer_event1 = Event::new_timer_event(1, 1000);
   let mut timer_event2 = Event::new_timer_event(2, 1000);
-  let mut timer_event3 = Event::new_timer_event(3, 1000);
+  let mut timer_event3 = Event::new_timer_event(3, 500);
 
   event_loop.register(&mut timer_event1);
   event_loop.register(&mut timer_event2);
@@ -35,7 +35,7 @@ pub struct Server {
 
 }
 impl Handler for Server {
-    fn ready(&self, id:RawFd) {
+    fn ready(&mut self, id: RawFd, event_loop: &mut EventLoop) {
       println!("handler ready: id is {}", id);
     } 
 }
