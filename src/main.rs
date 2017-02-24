@@ -5,7 +5,9 @@
 
 use std::os::unix::io::AsRawFd;
 use std::os::unix::io::RawFd;
-
+use std::fmt;
+// growable array
+use std::vec::Vec;
 //IO of the stream
 use std::io::{self, Read, Write, BufReader, BufRead};
 
@@ -29,7 +31,6 @@ fn main() {
   loop {
     //println!("polling..");
     event_loop.run(&mut server);
-    io::stdout().flush().unwrap();
 
   }
 }
@@ -37,7 +38,7 @@ pub struct Server {
   id: RawFd,
   listener: TcpListener,
   // server needs to maintain a list of accepted connections
-  connections: HashMap<RawFd, TcpStream>,
+  connections: HashMap<RawFd, Client>,
 }
 impl Server {
   fn new(tcp: TcpListener) -> Server {
@@ -59,9 +60,9 @@ impl Server {
         println!("new client: {:?}", addr);
         //let mut tcp_stream = Event::new_tcp_stream(&socket);
         event_loop.register_socket(&socket);
-
+        let client = Client::new(socket.as_raw_fd(), socket);
         //self.handle_request(&socket);
-        self.connections.insert(socket.as_raw_fd(), socket);
+        self.connections.insert(client.as_raw_fd(), client);
       },
       Err(e) => println!("couldn't get client: {:?}", e),
     }
@@ -75,17 +76,25 @@ impl Server {
 
     println!("socket {} has {} bytes.", id, event.get_data());
     // read from the socket to buffer
-    if(event.is_readable()) {
-      match self.connections.get(&id).unwrap().read(&mut buffer[..]) {
-        Ok(0) => println!("no data being read."),
-        Ok(n) => println!("read {} bytes", n),
-        Err(e) => panic!("{:?}", e),
-      }
-    }
+    // if(event.is_readable()) {
+    //   match self.connections.get(&id).unwrap().read(&mut buffer[..]) {
+    //     Ok(0) => println!("no data being read."),
+    //     Ok(n) => {
+    //       println!("read {} bytes", n);
+    //     }
+    //     Err(e) => panic!("{:?}", e),
+    //   }
+    // }
 
-    // deregister from event_loop
-    // also remove from connections
-    // event_loop.deregister_socket(self.connections.get_mut(&id).unwrap());
+    let mut message: Message = self.connections.get_mut(&id).unwrap().get_message(&id, &event.get_data());
+    message.print();
+    //add message to client's send_queue
+    self.connections.get_mut(&id).unwrap().send_message(message);
+    
+    event_loop.deregister_fildes(&id);
+
+    event_loop.register_fildes_for_writing(&id);
+
 
   }
   fn handle_request(&self, stream: &TcpStream) {
@@ -133,53 +142,93 @@ impl Handler for Server {
         } 
         else if (event.is_writable()) {
           println!("event {} is writable", id);
+          self.connections.get_mut(&id).unwrap().write_message();
+          // deregister from event_loop
+          // TODO: also remove from connections
+          event_loop.deregister_fildes_write(&id);
+
         } 
       }
     }
 }
-
-struct Connection {
-    socket: TcpStream,
+// TODO: reimplement connections;
+// TODO: let connections manage reading message and writing message
+struct Client {
     id: RawFd,
-    //buffer,
+    socket: TcpStream,
+    send_queue: Vec<Message>,
 }
 
-impl Connection {
-    fn new(sock: TcpStream, id: RawFd) -> Connection {
-        Connection {
+impl Client {
+    pub fn new(id: RawFd, sock: TcpStream) -> Client {
+        Client {
             id: id,
             socket: sock,
+            send_queue: Vec::with_capacity(1024),
         }
     }
-
-    fn readable(&mut self) {
-      // the connection is  EV_CLEAR and EV_ONESHOT, so we must drain
-      // the entire socket receive buffer, otherwise the server will hang.
-      // let mut recv_buf = ByteBuf::mut_with_capacity(2048);
-      // loop {
-      //     match self.sock.try_read_buf(&mut recv_buf) {
-      //         // the socket receive buffer is empty, so let's move on
-      //         // try_read_buf internally handles WouldBlock here too
-      //         Ok(None) => {
-      //             println!("connection : read 0 bytes");
-      //             break;
-      //         },
-      //         Ok(Some(n)) => {
-      //             println!("connection : we read {} bytes", n);
-
-
-      //             if n < recv_buf.capacity() {
-      //                 break;
-      //             }
-      //         },
-      //         Err(e) => {
-      //             error!("Failed to read buffer for id {}, error: {}", self.id, e);
-      //             return Err(e);
-      //         }
-      //     }
-      // }
+    pub fn as_raw_fd(&self) -> RawFd {
+      self.socket.as_raw_fd()
     }
-    fn writable(&mut self) {
-      //TODO: implement me
+    pub fn get_message(&mut self, id: &RawFd, len: &u32) -> Message {
+      let mut buffer = vec![0; *len as usize];
+      self.socket.read(&mut buffer[..]);
+      Message {
+        buf: buffer,
+      }   
+    }
+    pub fn send_message(&mut self, message: Message) -> () {
+      self.send_queue.push(message);
+    }
+    pub fn write_message(&mut self) -> () {
+      let mut message: Message = self.send_queue.pop().unwrap();
+      let mut buf:Vec<u8> = message.buf;
+      self.socket.write(&buf[..]);
     }
 }
+struct Message {
+  buf: Vec<u8>,
+}
+impl Message {
+  pub fn new() -> Message {
+    Message {
+      buf: Vec::with_capacity(1024),
+    }
+  }
+
+  pub fn length(&self) -> usize {
+    self.buf.len()
+  }
+  pub fn from_sock(&mut self, sock: &mut TcpStream, len: u32) {
+    let mut count = len.clone();
+    for byte in sock.bytes() {
+
+      count -= 1;
+      
+      match byte {
+        Ok(c) => {
+          //println!("{}", c);
+          self.buf.push(c);
+        }
+        _ => break,
+      }
+      if(count == 0) {break;}
+    }     
+  }
+  pub fn print(&self) {
+    println!("message print...");
+    println!("{:?}", self.buf);
+  }
+}
+
+
+impl Write for Message {
+   fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+      self.buf.write(buf) 
+   }
+   fn flush(&mut self) -> io::Result<()> {
+      self.buf.flush()
+   }
+}
+
+

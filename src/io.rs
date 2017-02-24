@@ -62,11 +62,25 @@ impl EventLoop {
 			_ => ()
 		}
 	}
+	pub fn register_for_writing(&self, event: &mut Event) {
+		//println!("register: {}", event.kevent.ident);
+	    //let changes = vec![event.kevent];
+	    event.ev_set_write();
+	    let changes = vec![event.kevent];
+	    println!("self.kqueue is {}", self.kqueue);
+		match kevent(self.kqueue, &changes, &mut [], 0) {
+			Ok(v) => println!("kevent returns: {}", v),
+			_ => ()
+		}
+	}
 	pub fn register_socket<T: AsRawFd>(&self, socket: &T) {
 		let mut event: Event = Event::new_socket_event(socket);
 		self.register(&mut event);
 	}
-
+    pub fn register_fildes_for_writing(&self, id: &RawFd) {
+		let mut event = Event::new_event(&id);
+		self.register_for_writing(&mut event);
+	}
 	pub fn reregister() {
 		//TO DO: implement me.
 	}
@@ -78,6 +92,15 @@ impl EventLoop {
 			Ok(v) => (),
 			_ => ()
 		}
+	}
+	// avoid borrowing
+	pub fn deregister_fildes(&self, id: &RawFd) {
+		let mut event = Event::new_event(&id);
+		self.deregister(&mut event);
+	}
+	pub fn deregister_fildes_write(&self, id: &RawFd) {
+		let mut event = Event::new_event_write(&id);
+		self.deregister(&mut event);
 	}
 	pub fn deregister_socket<T:AsRawFd>(&self, socket: &T) {
 		let mut event = Event::new_socket_event(socket);
@@ -156,8 +179,42 @@ impl Event {
 	fn ev_set_add(&mut self) {
 		self.kevent.flags = EV_ADD | EV_ENABLE;
 	}
+	fn ev_set_write(&mut self) {
+		self.kevent.filter = EventFilter::EVFILT_WRITE;
+		self.kevent.flags = EV_ADD | EV_ENABLE;
+	}
 	fn ev_set_delete(&mut self) {
 		self.kevent.flags = EV_DELETE;
+	}
+	fn new_event(id: & RawFd) -> Event {
+		let new_event = KEvent {
+	        ident: *id as usize, 
+	        filter: EventFilter::EVFILT_READ,
+	        //flags: EV_ADD | EV_ENABLE,
+	        // EV_CLEAR for edge, EV_ONESHOT for oneshot
+	        flags: EV_ADD | EV_ENABLE ,
+	        fflags: FilterFlag::empty(),
+	        data: 0,
+	        udata: 0,
+	    };
+		Event {
+			kevent: new_event,
+		}
+	}
+	fn new_event_write(id: & RawFd) -> Event {
+		let new_event = KEvent {
+	        ident: *id as usize, 
+	        filter: EventFilter::EVFILT_WRITE,
+	        //flags: EV_ADD | EV_ENABLE,
+	        // EV_CLEAR for edge, EV_ONESHOT for oneshot
+	        flags: EV_ADD | EV_ENABLE ,
+	        fflags: FilterFlag::empty(),
+	        data: 0,
+	        udata: 0,
+	    };
+		Event {
+			kevent: new_event,
+		}
 	}
 	pub fn new_socket_event<T: AsRawFd>(listener: & T) -> Event {
 		println!("new_tcp_event: {}", listener.as_raw_fd());
