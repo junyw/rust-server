@@ -17,7 +17,7 @@ impl Service for Echo {
 fn main() {
   let listener = TcpListener::bind("127.0.0.1:1300").unwrap();
   
-  let mut service = Echo;
+  let service = Echo;
 
   let mut server = Server::new(listener, service);
 

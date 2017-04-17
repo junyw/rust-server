@@ -9,12 +9,12 @@ pub struct Event {
 impl Event {
 	pub fn new(id: &Identifier) -> Event {
 		let mut kevent = Event::new_kevent(&id.get_fd());
-		if(id.readable()) {
+		if id.readable() {
 			kevent.filter = EventFilter::EVFILT_READ;
 			Event {
 	 	      kevent: kevent,
 		    }
-		} else if (id.writable()) {
+		} else if id.writable() {
 			kevent.filter = EventFilter::EVFILT_WRITE;
 			Event {
 	 	      kevent: kevent,
@@ -74,7 +74,6 @@ impl Event {
 		// id is a value used to identify the event.
 		// timer is a timer in milliseconds.
 		// EV_ADD | EV_ENABLE indicates we want to add and enable the timer at the same time.
-		println!("new_timer_event: {}", id);
 		let new_event = KEvent {
 	        ident: id, 
 	        filter: EventFilter::EVFILT_TIMER,

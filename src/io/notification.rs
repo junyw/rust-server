@@ -35,7 +35,6 @@ pub trait Handler {
     fn ready(&mut self, id:RawFd, ev_set : EventSet, event_loop : &mut EventLoop);
 }
 
-const MAX_EVENT_COUNT : usize = 1024;
 pub struct EventLoop {
 	kqueue: RawFd,
 	// evList is used for retrival
@@ -47,7 +46,7 @@ impl EventLoop {
 		println!("created kq = {}", kq);
 		Ok(EventLoop {
 			kqueue: kq,
-			evList: vec![Event::new_timer_event(0,0).kevent; MAX_EVENT_COUNT],
+			evList: vec![Event::new_timer_event(0,0).kevent],
 		})
 	}
 	fn ev_register(&self, event: Event) {
@@ -93,10 +92,10 @@ impl EventLoop {
 				//     writeable_fd(evi.ident);
 	          println!("Event with ID {:?} triggered", self.evList.get(i).unwrap().ident);
 	          let mut ev_set : EventSet;
-	          if(self.evList[i].filter == EventFilter::EVFILT_READ) {
+	          if self.evList[i].filter == EventFilter::EVFILT_READ  {
 	          	ev_set = EventSet::readable();
 	          	ev_set.set_data(self.evList[i].data as usize);
-	          } else if(self.evList[i].filter == EventFilter::EVFILT_WRITE) {
+	          } else if self.evList[i].filter == EventFilter::EVFILT_WRITE {
 	          	ev_set = EventSet::writable();
 	          } else {
 	          	ev_set = EventSet::new();

@@ -6,6 +6,7 @@ use io::notification::{EventLoop, Handler, Identifier, Interest, EventSet};
 use std::io::{self, Read, Write, BufReader, BufRead};
 use ansi_term::Colour::*;
 use service::Service;
+use nix::unistd::close;
 
 pub struct Server<T: Service> {
 
@@ -92,19 +93,27 @@ impl<T: Service>  Dispatcher<T> {
 
     //message.print();
     //add message to client's send_queue
-    if(ev_set.is_readable()) {
+    if ev_set.is_readable() {
       let mut message: Message = self.connections.get_mut(&id).unwrap().get_message(&id, &(ev_set.get_data() as u32));
       
-      let return_message = self.service.ready(message.clone());
+      // if a socket is readable but there is nothing, it means the connection is closed;
+      if message.length() == 0 {
+        let identifier = Identifier::new(id, Interest::Read);
+        event_loop.deregister(&identifier);
+        close(id);
+        println!("socket {} closed", id);
+      } else {
+        let return_message = self.service.ready(message.clone());
 
-      self.connections.get_mut(&id).unwrap().send_message(return_message);
+        self.connections.get_mut(&id).unwrap().send_message(return_message);
 
-      let identifier = Identifier::new(id, Interest::Read);
-      event_loop.deregister(&identifier);
+        let identifier = Identifier::new(id, Interest::Read);
+        event_loop.deregister(&identifier);
 
-      let identifier2 = Identifier::new(id, Interest::Write);
+        let identifier2 = Identifier::new(id, Interest::Write);
 
-      event_loop.register(&identifier2);
+        event_loop.register(&identifier2);
+      }
     }
 
 
@@ -140,10 +149,13 @@ impl<T: Service> Handler for Dispatcher<T> {
 
           self.connections.get_mut(&id).unwrap().write_message();
           // deregister from event_loop
-          // TODO: also remove from connections
+          // TODO: also remove from connections?
           let identifier = Identifier::new(id, Interest::Write);
+          let identifier2 = Identifier::new(id, Interest::Read);
 
           event_loop.deregister(&identifier);
+          // keep reading from this socket;
+          event_loop.register(&identifier2);
 
         } 
       }
