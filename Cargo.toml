@@ -5,3 +5,5 @@ authors = ["wang4615 <wang.juny@husky.neu.edu>"]
 
 [dependencies]
 nix = "0.7.0"
+ansi_term = "0.9.0"
+

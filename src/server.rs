@@ -1,18 +1,23 @@
+
 use std::os::unix::io::{RawFd, AsRawFd};
 use std::collections::HashMap;
 use std::net::{TcpListener, TcpStream};
 use io::notification::{EventLoop, Handler, Identifier, Interest, EventSet};
 use std::io::{self, Read, Write, BufReader, BufRead};
+use ansi_term::Colour::*;
+use service::Service;
 
-pub struct Server {
+pub struct Server<T: Service> {
+
   event_loop: EventLoop,
-  dispatcher: Dispatcher,
-}
-impl Server {
-  pub fn new(tcp: TcpListener) -> Server {
+  dispatcher: Dispatcher<T>,
+} 
+
+impl<T: Service> Server<T> {
+  pub fn new(tcp: TcpListener, service: T) -> Server<T> {
     Server {
       event_loop: EventLoop::new().unwrap(),
-      dispatcher: Dispatcher::new(tcp),
+      dispatcher: Dispatcher::new(tcp, service),
     }
   }
   pub fn initialize(&mut self) {
@@ -25,19 +30,21 @@ impl Server {
     }
   }
 }
-pub struct Dispatcher {
+pub struct Dispatcher<T: Service> {
   id: RawFd,
   listener: TcpListener,
   // server needs to maintain a list of accepted connections
   connections: HashMap<RawFd, Client>,
+  service: T,
 }
 
-impl Dispatcher {
-  pub fn new(tcp: TcpListener) -> Dispatcher {
+impl<T: Service>  Dispatcher<T> {
+  pub fn new(tcp: TcpListener, service: T) -> Dispatcher<T> {
     Dispatcher {
       id: tcp.as_raw_fd(),
       listener: tcp,
       connections: HashMap::new(),
+      service: service,
     }
   }
   pub fn as_raw_fd(&self) -> RawFd {
@@ -46,7 +53,7 @@ impl Dispatcher {
 
   // Accept a new client connection.
   fn accept(&mut self, event_loop: &mut EventLoop) {
-    println!("accept new connection.");
+    println!("{}", Red.bold().paint("accept new connection."));
     // Accept a new incoming connection from this listener with function accept(). 
     // fn accept(&self) -> Result<(TcpStream, SocketAddr)>
     //let stream = self.listener.accept().unwrap().0;
@@ -87,8 +94,10 @@ impl Dispatcher {
     //add message to client's send_queue
     if(ev_set.is_readable()) {
       let mut message: Message = self.connections.get_mut(&id).unwrap().get_message(&id, &(ev_set.get_data() as u32));
+      
+      let return_message = self.service.ready(message.clone());
 
-      self.connections.get_mut(&id).unwrap().send_message(message);
+      self.connections.get_mut(&id).unwrap().send_message(return_message);
 
       let identifier = Identifier::new(id, Interest::Read);
       event_loop.deregister(&identifier);
@@ -102,7 +111,7 @@ impl Dispatcher {
   }
 }
 
-impl Handler for Dispatcher {
+impl<T: Service> Handler for Dispatcher<T> {
     fn ready(&mut self, id: RawFd, ev_set: EventSet, event_loop: &mut EventLoop) {
       // called by event_loop to handle a incoming request.
       println!("Socket id={} is ready", id);
@@ -182,7 +191,9 @@ impl Client {
       // self.socket.write(&buf[..]);
     }
 }
-struct Message {
+
+#[derive(Clone)]
+pub struct Message {
   buf: Vec<u8>,
 }
 impl Message {
