@@ -24,7 +24,7 @@ impl<T: Service> Server<T> {
   fn initialize(&mut self) {
     let identifier = Identifier::new(self.dispatcher.as_raw_fd(), Interest::Read);
     self.event_loop.register(&identifier);
-    println!("{} {}", Red.bold().paint("Listening on"), self.dispatcher.listener.local_addr().unwrap());
+    println!("{} {}", Green.bold().paint("Listening on"), self.dispatcher.listener.local_addr().unwrap());
   }
   pub fn run(&mut self) {
     self.initialize();
@@ -61,7 +61,7 @@ impl<T: Service>  Dispatcher<T> {
     //let stream = self.listener.accept().unwrap().0;
     match self.listener.accept() {
       Ok((socket, addr)) => {
-        println!("{} {}", Red.bold().paint("Accept new connection"), addr);
+        println!("{} {}", Green.bold().paint("Accept new connection"), addr);
 
         //println!("new client: {:?}", addr);
         //let mut tcp_stream = Event::new_tcp_stream(&socket);
@@ -101,7 +101,7 @@ impl<T: Service>  Dispatcher<T> {
         {
           let client = self.connections.get_mut(&id).unwrap();
           client.shutdown();
-          println!("{} {}", Red.bold().paint("Close connection"), client.socket.peer_addr().unwrap());
+          println!("{} {}", Green.bold().paint("Close connection"), client.socket.peer_addr().unwrap());
         }       
         self.connections.remove(&id);
 
