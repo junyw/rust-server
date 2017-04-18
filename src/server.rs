@@ -218,7 +218,7 @@ pub struct Message {
 impl Message {
   pub fn new() -> Message {
     Message {
-      buf: Vec::with_capacity(1024),
+      buf: Vec::new(),
     }
   }
 
