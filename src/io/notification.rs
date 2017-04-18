@@ -43,7 +43,6 @@ pub struct EventLoop {
 impl EventLoop {
 	pub fn new() -> io::Result<EventLoop> {
 		let kq = kqueue().expect("could not get kq");
-		println!("created kq = {}", kq);
 		Ok(EventLoop {
 			kqueue: kq,
 			evList: vec![Event::new_timer_event(0,0).kevent],
@@ -82,7 +81,7 @@ impl EventLoop {
 	  //changes.push(event(0,0));
       match kevent(self.kqueue, &[], self.evList.as_mut_slice(), 0) {
 	      Ok(n) if n > 0 => {
-	        println!("poll triggered......");
+	        //println!("poll triggered......");
 	        for i in 0..n {
 				// if (evi.flags & EV_ERROR)
 				//     /* error */
@@ -90,7 +89,7 @@ impl EventLoop {
 				//     readable_fd(evi.ident);
 				// if (evi.filter == EVFILT_WRITE)
 				//     writeable_fd(evi.ident);
-	          println!("Event with ID {:?} triggered", self.evList.get(i).unwrap().ident);
+	          //println!("Event with ID {:?} triggered", self.evList.get(i).unwrap().ident);
 	          let mut ev_set : EventSet;
 	          if self.evList[i].filter == EventFilter::EVFILT_READ  {
 	          	ev_set = EventSet::readable();

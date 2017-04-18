@@ -1,7 +1,7 @@
-
+use std::str;
 use std::os::unix::io::{RawFd, AsRawFd};
 use std::collections::HashMap;
-use std::net::{TcpListener, TcpStream};
+use std::net::{TcpListener, TcpStream, Shutdown};
 use io::notification::{EventLoop, Handler, Identifier, Interest, EventSet};
 use std::io::{self, Read, Write, BufReader, BufRead};
 use ansi_term::Colour::*;
@@ -21,11 +21,13 @@ impl<T: Service> Server<T> {
       dispatcher: Dispatcher::new(tcp, service),
     }
   }
-  pub fn initialize(&mut self) {
+  fn initialize(&mut self) {
     let identifier = Identifier::new(self.dispatcher.as_raw_fd(), Interest::Read);
     self.event_loop.register(&identifier);
+    println!("{} {}", Red.bold().paint("Listening on"), self.dispatcher.listener.local_addr().unwrap());
   }
   pub fn run(&mut self) {
+    self.initialize();
     loop {
       self.event_loop.run(&mut self.dispatcher);
     }
@@ -54,15 +56,17 @@ impl<T: Service>  Dispatcher<T> {
 
   // Accept a new client connection.
   fn accept(&mut self, event_loop: &mut EventLoop) {
-    println!("{}", Red.bold().paint("accept new connection."));
     // Accept a new incoming connection from this listener with function accept(). 
     // fn accept(&self) -> Result<(TcpStream, SocketAddr)>
     //let stream = self.listener.accept().unwrap().0;
     match self.listener.accept() {
       Ok((socket, addr)) => {
-        println!("new client: {:?}", addr);
+        println!("{} {}", Red.bold().paint("Accept new connection"), addr);
+
+        //println!("new client: {:?}", addr);
         //let mut tcp_stream = Event::new_tcp_stream(&socket);
         let identifier = Identifier::new(socket.as_raw_fd(), Interest::Read);
+        
 
         event_loop.register(&identifier);
         let client = Client::new(socket.as_raw_fd(), socket);
@@ -75,21 +79,11 @@ impl<T: Service>  Dispatcher<T> {
 
   }
   fn receive(&mut self, id: RawFd, ev_set: EventSet, event_loop: &mut EventLoop) {
-    println!("receive from socket id={}", id);
+    //println!("receive from socket id={}", id);
     let mut buffer = vec![0; 20];
     // to get the socket, use self.connections.get(&id).unwrap()
 
-    println!("socket {} has {} bytes.", id, ev_set.get_data());
-    // read from the socket to buffer
-    // if(event.is_readable()) {
-    //   match self.connections.get(&id).unwrap().read(&mut buffer[..]) {
-    //     Ok(0) => println!("no data being read."),
-    //     Ok(n) => {
-    //       println!("read {} bytes", n);
-    //     }
-    //     Err(e) => panic!("{:?}", e),
-    //   }
-    // }
+    //println!("socket {} has {} bytes.", id, ev_set.get_data());
 
     //message.print();
     //add message to client's send_queue
@@ -100,8 +94,17 @@ impl<T: Service>  Dispatcher<T> {
       if message.length() == 0 {
         let identifier = Identifier::new(id, Interest::Read);
         event_loop.deregister(&identifier);
-        close(id);
-        println!("socket {} closed", id);
+        let identifier2 = Identifier::new(id, Interest::Write);
+        event_loop.deregister(&identifier2);
+
+        //close(id);
+        {
+          let client = self.connections.get_mut(&id).unwrap();
+          client.shutdown();
+          println!("{} {}", Red.bold().paint("Close connection"), client.socket.peer_addr().unwrap());
+        }       
+        self.connections.remove(&id);
+
       } else {
         let return_message = self.service.ready(message.clone());
 
@@ -123,7 +126,7 @@ impl<T: Service>  Dispatcher<T> {
 impl<T: Service> Handler for Dispatcher<T> {
     fn ready(&mut self, id: RawFd, ev_set: EventSet, event_loop: &mut EventLoop) {
       // called by event_loop to handle a incoming request.
-      println!("Socket id={} is ready", id);
+      //println!("Socket id={} is ready", id);
       // if events.is_error() {
       //       return;
       // }
@@ -139,13 +142,13 @@ impl<T: Service> Handler for Dispatcher<T> {
       if self.id == id {
         self.accept(event_loop);
       } else {
-        println!("socket {} is readable: {}", id, ev_set.is_readable());
-        println!("socket {} is writable: {}", id, ev_set.is_writable());
+        //println!("socket {} is readable: {}", id, ev_set.is_readable());
+        //println!("socket {} is writable: {}", id, ev_set.is_writable());
         if(ev_set.is_readable()) {
           self.receive(id, ev_set, event_loop);
         } 
         else if (ev_set.is_writable()) {
-          println!("event {} is writable", id);
+          //println!("event {} is writable", id);
 
           self.connections.get_mut(&id).unwrap().write_message();
           // deregister from event_loop
@@ -194,13 +197,17 @@ impl Client {
       match self.send_queue.pop() {
         Some(message) => {
           let mut buf:Vec<u8> = message.buf;
-          self.socket.write(&buf[..]);
+          self.socket.write_all(&buf[..]).unwrap();
+          self.socket.flush();
         }
         None => (),
       }
       // let mut message: Message = self.send_queue.pop().unwrap();
       // let mut buf:Vec<u8> = message.buf;
       // self.socket.write(&buf[..]);
+    }
+    pub fn shutdown(&mut self) -> () {
+      self.socket.shutdown(Shutdown::Both);
     }
 }
 
@@ -234,9 +241,17 @@ impl Message {
       if(count == 0) {break;}
     }     
   }
+  pub fn to_str(&self) -> &str {
+    let s = match str::from_utf8(&self.buf) {
+        Ok(v) => v,
+        Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
+    };
+    s
+  }
+
+  
   pub fn print(&self) {
-    println!("message print...");
-    println!("{:?}", self.buf);
+    println!("{}", self.to_str());
   }
 }
 
