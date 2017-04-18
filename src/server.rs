@@ -144,10 +144,10 @@ impl<T: Service> Handler for Dispatcher<T> {
       } else {
         //println!("socket {} is readable: {}", id, ev_set.is_readable());
         //println!("socket {} is writable: {}", id, ev_set.is_writable());
-        if(ev_set.is_readable()) {
+        if ev_set.is_readable()  {
           self.receive(id, ev_set, event_loop);
         } 
-        else if (ev_set.is_writable()) {
+        else if ev_set.is_writable() {
           //println!("event {} is writable", id);
 
           self.connections.get_mut(&id).unwrap().write_message();
@@ -238,7 +238,7 @@ impl Message {
         }
         _ => break,
       }
-      if(count == 0) {break;}
+      if count == 0 {break;}
     }     
   }
   pub fn to_str(&self) -> &str {

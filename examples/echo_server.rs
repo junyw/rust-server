@@ -1,11 +1,11 @@
 // $ cargo run --example echo_server
 // $ cargo run --example client
 
-extern crate tinyIO;
-use tinyIO::server::{Server, Message};
+extern crate carbon;
+use carbon::server::{Server, Message};
 use std::io::{self, Read, Write, BufReader, BufRead};
 use std::net::{TcpListener, TcpStream};
-use tinyIO::service::Service;
+use carbon::service::Service;
 
 struct Echo;
 impl Service for Echo {

@@ -12,7 +12,7 @@ macro_rules! hashmap {
     }}
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Method {
 	GET,
 	POST,
@@ -37,6 +37,12 @@ impl Request {
 			version: String::new(),
 			fields: HashMap::new(),
 		})
+	}
+	pub fn method(&self) -> Method {
+		self.method
+	}
+	pub fn uri(&self) -> String {
+		self.uri.to_string()
 	}
 	pub fn parse(&mut self, input: &str) {
 		let mut v: Vec<&str> = input.split('\n').collect();
@@ -89,7 +95,7 @@ impl Response {
 		Response {
 			version: String::from("HTTP/1.1"),
 			status:  String::from("200 OK"),
-			fields: hashmap!["Date"   => dt.format("%Y-%m-%d %H:%M:%S").to_string(), 
+			fields: hashmap![ "Date"   => dt.format("%Y-%m-%d %H:%M:%S").to_string(), 
 							  "Server" => "Rust-server/0.0.0", 
 							  "Content-Length" => "0",
 							  "Content-Type"   => "text/html",
