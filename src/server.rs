@@ -35,8 +35,8 @@ impl<T: Service> Server<T> {
 pub struct Dispatcher<T: Service> {
   id: RawFd,
   listener: TcpListener,
-  // server needs to maintain a list of accepted connections
-  connections: HashMap<RawFd, Client>,
+  // callbacks?
+  connections: HashMap<RawFd, Client>,  // server needs to maintain a list of accepted connections
   service: T,
 }
 
@@ -78,10 +78,6 @@ impl<T: Service>  Dispatcher<T> {
 
   }
   fn receive(&mut self, id: RawFd, ev_set: EventSet, event_loop: &mut EventLoop) {
-    //println!("receive from socket id={}", id);
-    // to get the socket, use self.connections.get(&id).unwrap()
-
-    //println!("socket {} has {} bytes.", id, ev_set.get_data());
 
     //message.print();
     //add message to client's send_queue

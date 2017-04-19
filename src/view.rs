@@ -1,8 +1,9 @@
-use std::path::Path;
+use std::path::{Path,PathBuf};
 use std::fs::File;
 use http::{Request, Response, Method};
 use std::io::prelude::*;
 use std::error::Error;
+use std::env;
 
 pub trait View {
     fn render(&self) -> Response;
@@ -11,15 +12,17 @@ pub trait View {
 pub struct NotFound;
 impl View for NotFound {
 	fn render(&self) -> Response {
-		let mut response = Response::ok();
-		response.body("<html><body> PAGE NOT FOUND </body></html>".to_string());
+		let mut response = Response::ok()
+									.body("<html><body> PAGE NOT FOUND </body></html>".to_string());
 		response
 	}
 }
+
 pub struct StaticPage {
 	url: &'static str,
 }
 impl StaticPage {
+
 	pub fn new(path: &'static str) -> StaticPage {
 		StaticPage {
 			url: path,
@@ -30,7 +33,10 @@ impl StaticPage {
 impl View for StaticPage {
 	fn render(&self) -> Response {
 		let mut response = Response::ok();
-		let mut path = Path::new(self.url);
+		
+		let mut root: PathBuf = env::current_dir().unwrap();
+		root.push(Path::new(self.url));
+		let mut path = root.as_path();
 		let display = path.display();
 
 		let mut file = match File::open(&path) {
@@ -45,9 +51,8 @@ impl View for StaticPage {
     	match file.read_to_string(&mut s) {
         	Err(why) => println!("couldn't read {}: {}", display,
                                                    why.description()),
-        	Ok(_) => print!("{} contains:\n{}", display, s),
+        	Ok(_) => (),//print!("{} contains:\n{}", display, s),
     	}
-		response.body(s);
-		response
+		response.body(s)
 	}
 }

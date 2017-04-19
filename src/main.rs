@@ -12,7 +12,7 @@ impl Service for Hello {
 		let mut response = Response::ok();
 		//let mut router = Router::new(String::from("/")).unwrap();
 		// router.serve(&Request::new().unwrap()).to_message()
-		response.body("<html><body><h>Hello World!</h><p>Using the rust server</p></body></html>".to_string());
+		response = response.body("<html><body><h>Hello World!</h><p>Using the rust server</p></body></html>".to_string());
 		println!("{}", response.to_string());
 		response.to_message()
 	}	

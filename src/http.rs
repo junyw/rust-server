@@ -85,10 +85,10 @@ impl Request {
 		    	//println!("Name: {} Value: {} ", &cap[1], &cap[2]);
 			}
 		}
-		println!("{:?}",self.method );
-		println!("{:?}",self.uri );
-		println!("{:?}",self.version );
-		println!("{:?}",self.fields );
+		// println!("{:?}",self.method );
+		// println!("{:?}",self.uri );
+		// println!("{:?}",self.version );
+		// println!("{:?}",self.fields );
 	}
 }
 
@@ -101,12 +101,11 @@ pub struct Response{
 }
 
 impl Response {
-	pub fn ok() -> Response {
+	fn new() -> Response {
 		let dt = Local::now();
-
 		Response {
 			version: String::from("HTTP/1.1"),
-			status:  String::from("200 OK"),
+			status:  String::new(),
 			fields: hashmap![ "Date"   => dt.format("%Y-%m-%d %H:%M:%S").to_string(), 
 							  "Server" => "Rust-server/0.0.0", 
 							  "Content-Length" => "0",
@@ -115,9 +114,42 @@ impl Response {
 			body: String::new(),
 		}
 	}
-	pub fn body(&mut self, body: String) {
-		self.fields.insert("Content-Length".to_string(), body.len().to_string());
-		self.body = body;
+	pub fn ok() -> Response {
+		match Response::new() {
+			Response {version: v, status: s, fields: f, body: b} => {
+				Response {
+					version: v,
+					status:  String::from("200 OK"),
+					fields: f,
+					body: b,
+				}
+			}
+		}
+	}
+	pub fn not_found() -> Response {
+		match Response::new() {
+			Response {version: v, status: s, fields: f, body: b} => {
+				Response {
+					version: v,
+					status:  String::from("404 NOT FOUND"),
+					fields: f,
+					body: b,
+				}
+			}
+		}
+	}
+	pub fn body(self, body: String) -> Response {
+		match self {
+			Response {version: v, status: s, fields:mut f, body: b} => {
+				f.insert("Content-Length".to_string(), body.len().to_string());
+				Response {
+					version: v,
+					status:  s,
+					fields: f,
+					body: body,
+				}
+			}
+		}
 	}
 	pub fn to_string(&self) -> String {
 		let mut s = String::new();

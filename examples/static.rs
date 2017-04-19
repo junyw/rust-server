@@ -4,17 +4,25 @@ use std::io::{self, Read, Write, BufReader, BufRead};
 use std::net::{TcpListener, TcpStream};
 use carbon::service::Service;
 use carbon::http::Request;
+use carbon::router::*;
+use carbon::view::*;
+use std::path::{PathBuf, Path};
+use std::env;
 
 struct Echo;
 impl Service for Echo {
   
   fn ready(&mut self, message: Message) -> Message {
-    //println!("{}",message.to_str());
-    let mut response = Message::new();
+
     let mut request = Request::new().unwrap();
     request.parse(message.to_str());
-    response.write(b"HTTP/1.1 200 OK\nContent-Length: 39\n\n<html><body>Hello, World!</body></html>").unwrap();
-    response
+    
+    println!("Request Method and URI {:?} {:?}", request.method(), request.uri());
+    
+
+    let mut router = RouterBuilder::new().get(r"/$", Box::new(StaticPage::new(r"examples/index.html"))).build();
+                                         //.get(r"/info", Box::new(StaticPage::new()));
+    router.response(request.method(), &request.uri()).to_message() 
   } 
 }
 fn main() {

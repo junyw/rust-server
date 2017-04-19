@@ -6,7 +6,9 @@ use view::{View, NotFound, StaticPage};
 #[test]
 fn it_works() {
 	let mut routerBuilder = RouterBuilder::new();
-	let mut router = routerBuilder.get("b").get("c").post("D").build();
+	let mut router = routerBuilder.get("b", Box::new(NotFound))
+								  .get("c", Box::new(NotFound))
+								  .post("D", Box::new(NotFound)).build();
 	println!("{:?}", router.views[0].render());
 	println!("{:?}", router.route(Method::POST, "D"));
 }
@@ -23,12 +25,12 @@ impl RouterBuilder {
 			views: Vec::new(),
 		}
 	}
-	fn rule(self, method: Method, uri: &'static str) -> RouterBuilder {
+	fn rule(self, method: Method, uri: &'static str, view: Box<View>) -> RouterBuilder {
 		match self {
 			RouterBuilder {regexs: mut r, methods: mut m, views: mut v} => {
 				r.push(uri);
 				m.push(method);
-				v.push(Box::new(NotFound));
+				v.push(view);
 
 				RouterBuilder {
 					regexs: r,
@@ -38,11 +40,11 @@ impl RouterBuilder {
 			}
 		}
 	}
-	pub fn get(self, uri: &'static str) -> RouterBuilder {
-		self.rule(Method::GET, uri)
+	pub fn get(self, uri: &'static str, view: Box<View>) -> RouterBuilder {
+		self.rule(Method::GET, uri, view)
 	}
-	pub fn post(self, uri: &'static str) -> RouterBuilder {
-		self.rule(Method::POST, uri)
+	pub fn post(self, uri: &'static str, view: Box<View>) -> RouterBuilder {
+		self.rule(Method::POST, uri, view)
 	}
 	pub fn build(self) -> Router {
 		// TODO: check duplicate/confilict routes
@@ -74,11 +76,16 @@ impl Router {
 			views: vec![Box::new(NotFound), Box::new(NotFound)],
 		}
 	}
-	pub fn response() {
-
+	pub fn response(&self, method: Method, path: &str) -> Response {
+		match self.route(method, path) {
+			Some(i) => {
+				self.views[i].render()
+			}
+			None => Response::not_found()
+		}
 	}
-	fn route(&self, method: Method, input: &str) -> Option<usize> {
-		let matches: Vec<_> = self.regexs.matches(input).into_iter().collect();
+	fn route(&self, method: Method, path: &str) -> Option<usize> {
+		let matches: Vec<_> = self.regexs.matches(path).into_iter().collect();
 		for index in matches {
 			if self.methods[index] == method {
 				return Some(index);
