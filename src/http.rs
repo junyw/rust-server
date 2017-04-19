@@ -18,8 +18,20 @@ pub enum Method {
 	POST,
 	PUT,
 	DELETE,
-	NONE
-}
+	NONE,
+}  
+impl Method {
+	pub fn to_str(self) -> &'static str {
+		match self {
+			Method::GET => "GET",
+			Method::POST => "POST",
+			Method::PUT => "PUT",
+			Method::DELETE => "DELETE",
+			Method::NONE => "NONE",
+		}
+	}
+} 
+
 
 #[derive(Debug)]
 pub struct Request{

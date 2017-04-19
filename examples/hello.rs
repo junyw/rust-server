@@ -1,10 +1,9 @@
 
 extern crate carbon;
 use carbon::server::{Server, Message};
-use std::io::{self, Read, Write, BufReader, BufRead};
 use std::net::{TcpListener, TcpStream};
 use carbon::service::Service;
-
+use std::io::Write;
 struct Echo;
 impl Service for Echo {
   

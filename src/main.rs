@@ -1,15 +1,17 @@
 extern crate carbon;
 use carbon::server::{Server, Message};
-use std::io::{self, Read, Write, BufReader, BufRead};
 use std::net::{TcpListener, TcpStream};
 use carbon::service::Service;
-use carbon::http::Response;
+use carbon::http::{Response, Request};
+//use carbon::router::{Router, Action};
 
 struct Hello;
 impl Service for Hello {
 	
 	fn ready(&mut self, mut message: Message) -> Message {
 		let mut response = Response::ok();
+		//let mut router = Router::new(String::from("/")).unwrap();
+		// router.serve(&Request::new().unwrap()).to_message()
 		response.body("<html><body><h>Hello World!</h><p>Using the rust server</p></body></html>".to_string());
 		println!("{}", response.to_string());
 		response.to_message()
