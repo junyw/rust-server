@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::io::{self, Read, Write, BufReader, BufRead};
+use std::io::{self, Write};
 use regex::Regex;
 use chrono::prelude::*;
 use server::Message;
@@ -137,7 +137,7 @@ impl Response {
 	}
 	pub fn to_message(&self) -> Message {
 		let mut message = Message::new();
-		message.write(self.to_string().as_bytes());
+		message.write(self.to_string().as_bytes()).unwrap();
 		message
 	}
 }

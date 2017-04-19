@@ -3,10 +3,9 @@ use std::os::unix::io::{RawFd, AsRawFd};
 use std::collections::HashMap;
 use std::net::{TcpListener, TcpStream, Shutdown};
 use io::notification::{EventLoop, Handler, Identifier, Interest, EventSet};
-use std::io::{self, Read, Write, BufReader, BufRead};
+use std::io::{self, Read, Write};
 use ansi_term::Colour::*;
 use service::Service;
-use nix::unistd::close;
 
 pub struct Server<T: Service> {
 
@@ -80,7 +79,6 @@ impl<T: Service>  Dispatcher<T> {
   }
   fn receive(&mut self, id: RawFd, ev_set: EventSet, event_loop: &mut EventLoop) {
     //println!("receive from socket id={}", id);
-    let mut buffer = vec![0; 20];
     // to get the socket, use self.connections.get(&id).unwrap()
 
     //println!("socket {} has {} bytes.", id, ev_set.get_data());

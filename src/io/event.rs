@@ -1,6 +1,6 @@
-use nix::sys::event::{KEvent, kqueue, kevent, EventFilter, FilterFlag};
+use nix::sys::event::{KEvent, EventFilter, FilterFlag};
 use nix::sys::event::{EV_ADD, EV_ENABLE, EV_DELETE, EV_CLEAR, EV_ONESHOT, EV_ERROR};
-use std::os::unix::io::{AsRawFd, RawFd};
+use std::os::unix::io::RawFd;
 
 use io::notification::Identifier;
 pub struct Event {

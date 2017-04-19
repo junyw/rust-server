@@ -20,14 +20,12 @@ nix defined a KEvent structure:
       pub udata: usize,
    }
 */
-use std::ops::BitAnd;
 // Read
 // IO of the stream
-use std::io::{self, Read, Write, BufReader, BufRead};
-use nix::sys::event::{KEvent, kqueue, kevent, EventFilter, FilterFlag};
-use nix::sys::event::{EV_ADD, EV_ENABLE, EV_DELETE, EV_CLEAR, EV_ONESHOT, EV_ERROR};
-use std::os::unix::io::{AsRawFd, RawFd};
-use std::net::{TcpListener, TcpStream};
+use std::io::{self};
+use nix::sys::event::{KEvent, kqueue, kevent, EventFilter};
+//use nix::sys::event::{EV_ADD, EV_ENABLE, EV_DELETE, EV_CLEAR, EV_ONESHOT, EV_ERROR};
+use std::os::unix::io::RawFd;
 
 use io::event::Event;
 
@@ -37,26 +35,26 @@ pub trait Handler {
 
 pub struct EventLoop {
 	kqueue: RawFd,
-	// evList is used for retrival
-	evList: Vec<KEvent>,
+	// ev_list is used for retrival
+	ev_list: Vec<KEvent>,
 }
 impl EventLoop {
 	pub fn new() -> io::Result<EventLoop> {
 		let kq = kqueue().expect("could not get kq");
 		Ok(EventLoop {
 			kqueue: kq,
-			evList: vec![Event::new_timer_event(0,0).kevent],
+			ev_list: vec![Event::new_timer_event(0,0).kevent],
 		})
 	}
 	fn ev_register(&self, event: Event) {
 		let changes = vec![event.kevent];
 		match kevent(self.kqueue, &changes, &mut [], 0) {
-			Ok(v) => (),
+			Ok(_) => (),
 			_ => ()
 		}
 	}
 	pub fn register(&self, id: &Identifier) {
-		let mut event = Event::new(&id);
+		let event = Event::new(&id);
 		self.ev_register(event);
 
 	}
@@ -79,7 +77,7 @@ impl EventLoop {
 	  //let mut changes = Vec::with_capacity(1024);
 	  //changes.push(event(0,0));
 	  //changes.push(event(0,0));
-      match kevent(self.kqueue, &[], self.evList.as_mut_slice(), 0) {
+      match kevent(self.kqueue, &[], self.ev_list.as_mut_slice(), 0) {
 	      Ok(n) if n > 0 => {
 	        //println!("poll triggered......");
 	        for i in 0..n {
@@ -89,17 +87,17 @@ impl EventLoop {
 				//     readable_fd(evi.ident);
 				// if (evi.filter == EVFILT_WRITE)
 				//     writeable_fd(evi.ident);
-	          //println!("Event with ID {:?} triggered", self.evList.get(i).unwrap().ident);
+	          //println!("Event with ID {:?} triggered", self.ev_list.get(i).unwrap().ident);
 	          let mut ev_set : EventSet;
-	          if self.evList[i].filter == EventFilter::EVFILT_READ  {
+	          if self.ev_list[i].filter == EventFilter::EVFILT_READ  {
 	          	ev_set = EventSet::readable();
-	          	ev_set.set_data(self.evList[i].data as usize);
-	          } else if self.evList[i].filter == EventFilter::EVFILT_WRITE {
+	          	ev_set.set_data(self.ev_list[i].data as usize);
+	          } else if self.ev_list[i].filter == EventFilter::EVFILT_WRITE {
 	          	ev_set = EventSet::writable();
 	          } else {
 	          	ev_set = EventSet::new();
 	          }
-	          handler.ready(self.evList.get(i).unwrap().ident as i32,
+	          handler.ready(self.ev_list.get(i).unwrap().ident as i32,
 	          	ev_set, 
 	          	self);
 	          // since we have a connection, accept it and start a stream

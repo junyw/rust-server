@@ -9,3 +9,4 @@ pub mod http;
 pub mod server;
 pub mod service;
 pub mod router;
+pub mod view;

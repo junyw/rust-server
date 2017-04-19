@@ -1,4 +1,3 @@
-
 extern crate carbon;
 use carbon::server::{Server, Message};
 use std::net::{TcpListener, TcpStream};
