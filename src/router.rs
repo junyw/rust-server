@@ -1,7 +1,7 @@
 use http::{Response, Method};
 use regex::RegexSet;
 use view::{View, NotFound};
-use std::collections::HashMap;
+use fnv::FnvHashMap;
 
 #[test]
 fn it_works() {
@@ -54,7 +54,7 @@ impl RouterBuilder {
 					regexs: RegexSet::new(r).expect("regex set error"),
 					methods: m,
 					views: v,
-					cache: HashMap::new(),
+					cache: FnvHashMap::with_capacity_and_hasher(10, Default::default()),
 				}
 			}
 		}
@@ -66,7 +66,7 @@ pub struct Router  {
 	regexs: RegexSet,
 	methods: Vec<Method>,
 	views: Vec<Box<View>>,
-	cache: HashMap<String, String>,
+	cache: FnvHashMap<String, String>,
 }
 impl Router {
 	pub fn response(&mut self, method: Method, path: &str) -> Response {
