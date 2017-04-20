@@ -1,3 +1,5 @@
-
+.gitignore
 target/debug/
 target/release/
+.idea/
+rust-server.iml
