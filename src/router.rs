@@ -51,7 +51,7 @@ impl RouterBuilder {
 		match self {
 			RouterBuilder {regexs: mut r, methods: mut m, views: mut v} => {
 				Router {
-					regexs: RegexSet::new(r).unwrap(),
+					regexs: RegexSet::new(r).expect("regex set error"),
 					methods: m,
 					views: v,
 				}
@@ -62,26 +62,17 @@ impl RouterBuilder {
 }
 
 pub struct Router  {
-	//base: String,
-	// routes: HashMap<String, Route<View>>,
 	regexs: RegexSet,
 	methods: Vec<Method>,
 	views: Vec<Box<View>>,
 }
 impl Router {
-	pub fn new() -> Router {
-		Router {
-			regexs: RegexSet::new(&[r"a",r"b"]).unwrap(),
-			methods: vec![Method::GET, Method::GET],
-			views: vec![Box::new(NotFound), Box::new(NotFound)],
-		}
-	}
 	pub fn response(&self, method: Method, path: &str) -> Response {
 		match self.route(method, path) {
 			Some(i) => {
 				self.views[i].render()
 			}
-			None => Response::not_found()
+			None => NotFound.render()
 		}
 	}
 	fn route(&self, method: Method, path: &str) -> Option<usize> {

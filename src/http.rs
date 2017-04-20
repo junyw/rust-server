@@ -61,7 +61,7 @@ impl Request {
 		v.reverse();
 		match v.pop() {
 			Some(text) => {
-				let re = Regex::new(r"(\D+)\s(.+)\s(HTTP/.+)\r").unwrap();
+				let re = Regex::new(r"(\D+)\s(.+)\s(HTTP/.+)\r").expect("parse http request error");
 				for cap in re.captures_iter(text) {
 				    println!("Method: {} URI: {} Version: {}", &cap[1], &cap[2], &cap[3]);
 				    match &cap[1] {
@@ -77,7 +77,7 @@ impl Request {
 			}
 			None => println!("invalid http header"),
 		}
-		let re = Regex::new(r"(.+):\s(.+)\r").unwrap();
+		let re = Regex::new(r"(.+):\s(.+)\r").expect("parse http request error");
 
 		while let Some(text) = v.pop() {
 			for cap in re.captures_iter(text) {
@@ -169,7 +169,7 @@ impl Response {
 	}
 	pub fn to_message(&self) -> Message {
 		let mut message = Message::new();
-		message.write(self.to_string().as_bytes()).unwrap();
+		message.write(self.to_string().as_bytes()).expect("response to message error");
 		message
 	}
 }

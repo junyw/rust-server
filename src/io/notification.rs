@@ -97,7 +97,7 @@ impl EventLoop {
 	          } else {
 	          	ev_set = EventSet::new();
 	          }
-	          handler.ready(self.ev_list.get(i).unwrap().ident as i32,
+	          handler.ready(self.ev_list.get(i).expect("poll error").ident as i32,
 	          	ev_set, 
 	          	self);
 	          // since we have a connection, accept it and start a stream

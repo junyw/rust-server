@@ -34,25 +34,26 @@ impl View for StaticPage {
 	fn render(&self) -> Response {
 		let mut response = Response::ok();
 		
-		let mut root: PathBuf = env::current_dir().unwrap();
+		let mut root: PathBuf = env::current_dir().expect("current directory error");
 		root.push(Path::new(self.url));
 		let mut path = root.as_path();
 		let display = path.display();
-
-		let mut file = match File::open(&path) {
-        	Err(why) => {
-        					println!("couldn't open {}: {}", display,
-                                                   why.description());
-        					return Response::ok(); //not found page
-        				}
-        	Ok(file) => file,
-    	};
 		let mut s = String::new();
-    	match file.read_to_string(&mut s) {
-        	Err(why) => println!("couldn't read {}: {}", display,
-                                                   why.description()),
-        	Ok(_) => (),//print!("{} contains:\n{}", display, s),
-    	}
+		{
+			let mut file = match File::open(&path) {
+	        	Err(why) => {
+	        					println!("couldn't open {}: {}", display,
+	                                                   why.description());
+	        					return Response::ok(); //not found page
+	        				}
+	        	Ok(file) => file,
+	    	};
+	    	match file.read_to_string(&mut s) {
+	        	Err(why) => println!("couldn't read {}: {}", display,
+	                                                   why.description()),
+	        	Ok(_) => (),//print!("{} contains:\n{}", display, s),
+	    	} // file has been closed at this point
+   		}
 		response.body(s)
 	}
 }

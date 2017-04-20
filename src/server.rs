@@ -16,14 +16,14 @@ pub struct Server<T: Service> {
 impl<T: Service> Server<T> {
   pub fn new(tcp: TcpListener, service: T) -> Server<T> {
     Server {
-      event_loop: EventLoop::new().unwrap(),
+      event_loop: EventLoop::new().expect("server create event loop"),
       dispatcher: Dispatcher::new(tcp, service),
     }
   }
   fn initialize(&mut self) {
     let identifier = Identifier::new(self.dispatcher.as_raw_fd(), Interest::Read);
     self.event_loop.register(&identifier);
-    println!("{} {}", Green.bold().paint("Listening on"), self.dispatcher.listener.local_addr().unwrap());
+    println!("{} {}", Green.bold().paint("Listening on"), self.dispatcher.listener.local_addr().expect("server initialize"));
   }
   pub fn run(&mut self) {
     self.initialize();
@@ -82,7 +82,7 @@ impl<T: Service>  Dispatcher<T> {
     //message.print();
     //add message to client's send_queue
     if ev_set.is_readable() {
-      let mut message: Message = self.connections.get_mut(&id).unwrap().get_message(&id, &(ev_set.get_data() as u32));
+      let mut message: Message = self.connections.get_mut(&id).expect("dispatcher error").get_message(&id, &(ev_set.get_data() as u32));
       
       // if a socket is readable but there is nothing, it means the connection is closed;
       if message.length() == 0 {
@@ -102,7 +102,7 @@ impl<T: Service>  Dispatcher<T> {
       } else {
         let return_message = self.service.ready(message.clone());
 
-        self.connections.get_mut(&id).unwrap().send_message(return_message);
+        self.connections.get_mut(&id).expect("dispatcher receive error").send_message(return_message);
 
         let identifier = Identifier::new(id, Interest::Read);
         event_loop.deregister(&identifier);
@@ -191,7 +191,7 @@ impl Client {
       match self.send_queue.pop() {
         Some(message) => {
           let mut buf:Vec<u8> = message.buf;
-          self.socket.write_all(&buf[..]).unwrap();
+          self.socket.write_all(&buf[..]).expect("write message failure");
           self.socket.flush();
         }
         None => (),
