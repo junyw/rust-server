@@ -18,43 +18,33 @@ impl View for NotFound {
 		response
 	}
 }
-
-pub struct StaticPage {
-	url: &'static str,
+pub struct Page {
+	url: PathBuf,
 }
-impl StaticPage {
-
-	pub fn new(path: &'static str) -> StaticPage {
-		StaticPage {
-			url: path,
+impl Page {
+	pub fn new(path: &'static str) -> Page {
+		let mut path_buf = env::current_dir().expect("current directory error");
+		path_buf.push(Path::new(path));
+		Page {
+			url: path_buf,
 		}
 	}
 }
-
-impl View for StaticPage {
+impl View for Page {
 	fn render(&self) -> Response {
 		let response = Response::ok();
-		
-		let mut root: PathBuf = env::current_dir().expect("current directory error");
-		root.push(Path::new(self.url));
-		let path = root.as_path();
-		let display = path.display();
 		let mut s = String::new();
 		{
-			let mut file = match File::open(&path) {
-	        	Err(why) => {
-	        					println!("couldn't open {}: {}", display,
-	                                                   why.description());
-	        					return Response::not_found(); //not found page
-	        				}
+			let mut file = match File::open(self.url.as_path()) {
+	        	Err(why) => return Response::not_found(), // can not find file
 	        	Ok(file) => file,
-	    	};
+		    };
 	    	match file.read_to_string(&mut s) {
-	        	Err(why) => println!("couldn't read {}: {}", display,
-	                                                   why.description()),
-	        	Ok(_) => (),//print!("{} contains:\n{}", display, s),
-	    	} // file has been closed at this point
-   		}
+	        	Err(why) => println!("couldn't read file: {}", why.description()),
+	        	Ok(_) => (),
+	    	} 
+   		} // file has been closed at this point
 		response.body(s)
 	}
 }
+

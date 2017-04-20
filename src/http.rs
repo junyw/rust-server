@@ -38,7 +38,7 @@ pub struct Request{
 	method: Method,
 	uri: String,
 	version: String,
-	fields: HashMap<String, String>,
+	//fields: HashMap<String, String>,
 }
 
 impl Request {
@@ -47,7 +47,7 @@ impl Request {
 			method: Method::NONE,
 			uri: String::new(),
 			version: String::new(),
-			fields: HashMap::new(),
+			//fields: HashMap::new(),
 		})
 	}
 	pub fn method(&self) -> Method {
@@ -57,38 +57,42 @@ impl Request {
 		self.uri.to_string()
 	}
 	pub fn parse(&mut self, input: &str) {
-		let mut v: Vec<&str> = input.split('\n').collect();
-		v.reverse();
-		match v.pop() {
-			Some(text) => {
-				let re = Regex::new(r"(\D+)\s(.+)\s(HTTP/.+)\r").expect("parse http request error");
-				for cap in re.captures_iter(text) {
-				    // println!("Method: {} URI: {} Version: {}", &cap[1], &cap[2], &cap[3]);
-				    match &cap[1] {
-				    	"GET"  => self.method = Method::GET,
-				    	"POST" => self.method = Method::POST,
-				    	"PUT"  => self.method = Method::PUT,
-				    	"DELETE" => self.method = Method::DELETE,
-				    	_ => println!("unknown method {}", &cap[1]),
-				    }
-				    self.uri = String::from(&cap[2]);
-				    self.version = String::from(&cap[3]);
-				}
-			}
-			None => println!("invalid http header"),
-		}
-		let re = Regex::new(r"(.+):\s(.+)\r").expect("parse http request error");
+		let mut iter = input.split_whitespace();
+	    match iter.next().expect("parse http error") {
+	    	"GET"  => self.method = Method::GET,
+	    	"POST" => self.method = Method::POST,
+	    	"PUT"  => self.method = Method::PUT,
+	    	"DELETE" => self.method = Method::DELETE,
+	    	err => println!("unknown method {}", err ),
+	    }
+	    self.uri = String::from(iter.next().expect("parse http error"));
+	    // self.version = String::from(iter.next().expect("parse http error"));
+		// match lines.next() {
+		// 	Some(text) => {
+		// 		let re = Regex::new(r"(\D+)\s(.+)\s(HTTP/.+)\r").expect("parse http request error");
+		// 		for cap in re.captures_iter(text) {
+		// 		    // println!("Method: {} URI: {} Version: {}", &cap[1], &cap[2], &cap[3]);
+		// 		    match &cap[1] {
+		// 		    	"GET"  => self.method = Method::GET,
+		// 		    	"POST" => self.method = Method::POST,
+		// 		    	"PUT"  => self.method = Method::PUT,
+		// 		    	"DELETE" => self.method = Method::DELETE,
+		// 		    	_ => println!("unknown method {}", &cap[1]),
+		// 		    }
+		// 		    self.uri = String::from(&cap[2]);
+		// 		    self.version = String::from(&cap[3]);
+		// 		}
+		// 	}
+		// 	None => println!("invalid http header"),
+		// }
+		// let re = Regex::new(r"(.+):\s(.+)\r").expect("parse http request error");
 
-		while let Some(text) = v.pop() {
-			for cap in re.captures_iter(text) {
-				self.fields.insert(cap[1].to_string(), cap[2].to_string());
-		    	//println!("Name: {} Value: {} ", &cap[1], &cap[2]);
-			}
-		}
-		// println!("{:?}",self.method );
-		// println!("{:?}",self.uri );
-		// println!("{:?}",self.version );
-		// println!("{:?}",self.fields );
+		// while let Some(text) = v.pop() {
+		// 	for cap in re.captures_iter(text) {
+		// 		self.fields.insert(cap[1].to_string(), cap[2].to_string());
+		//     	//println!("Name: {} Value: {} ", &cap[1], &cap[2]);
+		// 	}
+		// }
 	}
 }
 
