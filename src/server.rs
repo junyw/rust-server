@@ -78,7 +78,7 @@ impl<T: Service>  Dispatcher<T> {
 
   }
   fn receive(&mut self, id: RawFd, ev_set: EventSet, event_loop: &mut EventLoop) {
-
+    println!("connections size {:?}", self.connections.len());
     //message.print();
     //add message to client's send_queue
     if ev_set.is_readable() {
@@ -154,7 +154,7 @@ impl Client {
     pub fn new(sock: TcpStream) -> Client {
         Client {
             socket: sock,
-            send_queue: Vec::with_capacity(1024),
+            send_queue: Vec::with_capacity(100),
         }
     }
     pub fn peer_addr(&self) -> Option<SocketAddr> {
@@ -197,7 +197,7 @@ impl Client {
     // }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Message {
   buf: Vec<u8>,
 }

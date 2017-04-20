@@ -113,8 +113,7 @@ impl Response {
 			fields: hashmap![ "Date"   => dt.format("%Y-%m-%d %H:%M:%S").to_string(), 
 							  "Server" => "Rust-server/0.0.0", 
 							  "Content-Length" => "0",
-							  "Content-Type"   => "text/html",
-							  "Connection"     => "Closed"],
+							  "Content-Type"   => "text/html"],
 			body: String::new(),
 		}
 	}
