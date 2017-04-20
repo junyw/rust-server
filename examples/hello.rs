@@ -1,10 +1,13 @@
 extern crate carbon;
+extern crate ansi_term;
 use carbon::server::{Server, Message};
 use std::net::TcpListener;
 use carbon::service::Service;
 use carbon::http::Request;
 use carbon::router::*;
 use carbon::view::*;
+use ansi_term::Colour::*;
+
 // use std::path::{PathBuf, Path};
 // use std::env;
 
@@ -38,9 +41,11 @@ fn main() {
   let service = Hello::new();
 
   let mut server = Server::new(listener, service);
-
-  server.run();
   
+  println!("{} http://127.0.0.1:1300", Blue.bold().paint("Open"));
+  
+  server.run();
+
 }
 
 

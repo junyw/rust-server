@@ -5,7 +5,6 @@ use http::Response;
 use std::io::prelude::*;
 use std::error::Error;
 use std::env;
-use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 use fnv::FnvHashMap;
 
@@ -46,11 +45,11 @@ impl View for Page {
 				let mut s = String::new();
 				{
 					let mut file = match File::open(self.url.as_path()) {
-			        	Err(why) => return Response::not_found(), // can not find file
+			        	Err(why) => return Response::server_error(), // can not find file
 			        	Ok(file) => file,
 				    };
 			    	match file.read_to_string(&mut s) {
-			        	Err(why) => return Response::not_found(),
+			        	Err(why) => return Response::server_error(),
 			        	Ok(_) => (),
 			    	} 
 		   		} // file has been closed at this point
@@ -59,19 +58,7 @@ impl View for Page {
 			}
 		};
 
-
 		let response = Response::ok();
-		// let mut s = String::new();
-		// {
-		// 	let mut file = match File::open(self.url.as_path()) {
-	 //        	Err(why) => return Response::not_found(), // can not find file
-	 //        	Ok(file) => file,
-		//     };
-	 //    	match file.read_to_string(&mut s) {
-	 //        	Err(why) => println!("couldn't read file: {}", why.description()),
-	 //        	Ok(_) => (),
-	 //    	} 
-  //  		} // file has been closed at this point
 		response.body(s)
 	}
 }

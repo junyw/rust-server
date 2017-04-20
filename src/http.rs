@@ -119,28 +119,20 @@ impl Response {
 		}
 	}
 	pub fn ok() -> Response {
-		match Response::new() {
-			Response {version: v, fields: f, body: b, ..} => {
-				Response {
-					version: v,
-					status:  String::from("200 OK"),
-					fields: f,
-					body: b,
-				}
-			}
-		}
+		let mut r = Response::new();
+		r.status = String::from("200 OK");
+		r
+
 	}
 	pub fn not_found() -> Response {
-		match Response::new() {
-			Response {version: v, fields: f, body: b, ..} => {
-				Response {
-					version: v,
-					status:  String::from("404 NOT FOUND"),
-					fields: f,
-					body: b,
-				}
-			}
-		}
+		let mut r = Response::new();
+		r.status = String::from("404 NOT FOUND");
+		r
+	}
+	pub fn server_error() -> Response {
+		let mut r = Response::new();
+		r.status = String::from("500 Internal Server Error");
+		r
 	}
 	pub fn body(self, body: String) -> Response {
 		match self {
