@@ -2,7 +2,7 @@ extern crate nix;
 extern crate ansi_term;
 extern crate regex;
 extern crate chrono;
-#[macro_use] extern crate ordermap;
+extern crate fnv;
 
 pub mod io;
 pub mod http;

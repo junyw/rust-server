@@ -5,14 +5,15 @@ use http::Response;
 use std::io::prelude::*;
 use std::error::Error;
 use std::env;
+use std::collections::HashMap;
 
 pub trait View {
-    fn render(&self) -> Response;
+    fn render(&self, cache: &mut HashMap<String, String>) -> Response;
 }
 
 pub struct NotFound;
 impl View for NotFound {
-	fn render(&self) -> Response {
+	fn render(&self, cache: &mut HashMap<String, String>) -> Response {
 		let response = Response::ok()
 					   .body("<html><body> PAGE NOT FOUND </body></html>".to_string());
 		response
@@ -31,7 +32,7 @@ impl Page {
 	}
 }
 impl View for Page {
-	fn render(&self) -> Response {
+	fn render(&self, cache: &mut HashMap<String, String>) -> Response {
 		let response = Response::ok();
 		let mut s = String::new();
 		{

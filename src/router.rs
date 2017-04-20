@@ -1,6 +1,8 @@
 use http::{Response, Method};
 use regex::RegexSet;
 use view::{View, NotFound};
+use std::collections::HashMap;
+
 #[test]
 fn it_works() {
 	let mut routerBuilder = RouterBuilder::new();
@@ -52,6 +54,7 @@ impl RouterBuilder {
 					regexs: RegexSet::new(r).expect("regex set error"),
 					methods: m,
 					views: v,
+					cache: HashMap::new(),
 				}
 			}
 		}
@@ -63,14 +66,15 @@ pub struct Router  {
 	regexs: RegexSet,
 	methods: Vec<Method>,
 	views: Vec<Box<View>>,
+	cache: HashMap<String, String>,
 }
 impl Router {
-	pub fn response(&self, method: Method, path: &str) -> Response {
+	pub fn response(&mut self, method: Method, path: &str) -> Response {
 		match self.route(method, path) {
 			Some(i) => {
-				self.views[i].render()
+				self.views[i].render(&mut self.cache)
 			}
-			None => NotFound.render()
+			None => NotFound.render(&mut self.cache)
 		}
 	}
 	fn route(&self, method: Method, path: &str) -> Option<usize> {

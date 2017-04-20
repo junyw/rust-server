@@ -1,11 +1,11 @@
 use std::str;
 use std::os::unix::io::{RawFd, AsRawFd};
-use std::collections::HashMap;
 use std::net::{TcpListener, TcpStream, SocketAddr};
 use io::notification::{EventLoop, Handler, Identifier, Interest, EventSet};
 use std::io::{self, Read, Write};
 use ansi_term::Colour::*;
 use service::Service;
+use fnv::FnvHashMap;
 
 pub struct Server<T: Service> {
 
@@ -36,7 +36,7 @@ pub struct Dispatcher<T: Service> {
   id: RawFd,
   listener: TcpListener,
   // callbacks?
-  connections: HashMap<RawFd, Client>,  // server needs to maintain a list of accepted connections
+  connections: FnvHashMap<RawFd, Client>,  // server needs to maintain a list of accepted connections
   service: T,
 }
 
@@ -45,7 +45,7 @@ impl<T: Service>  Dispatcher<T> {
     Dispatcher {
       id: tcp.as_raw_fd(),
       listener: tcp,
-      connections: HashMap::new(),
+      connections: FnvHashMap::with_capacity_and_hasher(100, Default::default()),
       service: service,
     }
   }
@@ -87,10 +87,8 @@ impl<T: Service>  Dispatcher<T> {
       // if a socket is readable but there is nothing, it means the connection is closed;
       // if message.length() == 0 {
       if ev_set.get_data() == 0 {
-        let identifier = Identifier::new(id, Interest::Read);
-        event_loop.deregister(&identifier);
-        let identifier2 = Identifier::new(id, Interest::Write);
-        event_loop.deregister(&identifier2);
+        event_loop.deregister(&Identifier::new(id, Interest::Read));
+        event_loop.deregister(&Identifier::new(id, Interest::Write));
 
         match self.connections.get_mut(&id).expect("Server getting client error").peer_addr() {
           Some(addr) => println!("{} {}", Green.bold().paint("Close connection"), addr),
@@ -100,17 +98,13 @@ impl<T: Service>  Dispatcher<T> {
 
       } else {
         let message: Message = self.connections.get_mut(&id).expect("dispatcher error").get_message(&(ev_set.get_data() as u32));
-
+        // return callbacks?
         let return_message = self.service.ready(message.clone());
 
         self.connections.get_mut(&id).expect("dispatcher receive error").send_message(return_message);
 
-        let identifier = Identifier::new(id, Interest::Read);
-        event_loop.deregister(&identifier);
-
-        let identifier2 = Identifier::new(id, Interest::Write);
-
-        event_loop.register(&identifier2);
+        event_loop.deregister(&Identifier::new(id, Interest::Read));
+        event_loop.register(&Identifier::new(id, Interest::Write));
       }
     }
 
@@ -121,16 +115,6 @@ impl<T: Service>  Dispatcher<T> {
 impl<T: Service> Handler for Dispatcher<T> {
     fn ready(&mut self, id: RawFd, ev_set: EventSet, event_loop: &mut EventLoop) {
       // called by event_loop to handle a incoming request.
-      //println!("Socket id={} is ready", id);
-      // if events.is_error() {
-      //       return;
-      // }
-      // if events.is_hup() {
-      //       return;
-      // }
-      // if events.is_writable() {
-      //     //Do something.
-      // }
 
       // if the TcpListener is ready, call accept to establish a new TcpStream
       // else, a TcpStream is ready.
