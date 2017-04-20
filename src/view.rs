@@ -1,6 +1,7 @@
 use std::path::{Path,PathBuf};
 use std::fs::File;
-use http::{Request, Response, Method};
+use http::Response;
+//use http::{Request, Response, Method};
 use std::io::prelude::*;
 use std::error::Error;
 use std::env;
@@ -12,8 +13,8 @@ pub trait View {
 pub struct NotFound;
 impl View for NotFound {
 	fn render(&self) -> Response {
-		let mut response = Response::ok()
-									.body("<html><body> PAGE NOT FOUND </body></html>".to_string());
+		let response = Response::ok()
+					   .body("<html><body> PAGE NOT FOUND </body></html>".to_string());
 		response
 	}
 }
@@ -32,11 +33,11 @@ impl StaticPage {
 
 impl View for StaticPage {
 	fn render(&self) -> Response {
-		let mut response = Response::ok();
+		let response = Response::ok();
 		
 		let mut root: PathBuf = env::current_dir().expect("current directory error");
 		root.push(Path::new(self.url));
-		let mut path = root.as_path();
+		let path = root.as_path();
 		let display = path.display();
 		let mut s = String::new();
 		{
@@ -44,7 +45,7 @@ impl View for StaticPage {
 	        	Err(why) => {
 	        					println!("couldn't open {}: {}", display,
 	                                                   why.description());
-	        					return Response::ok(); //not found page
+	        					return Response::not_found(); //not found page
 	        				}
 	        	Ok(file) => file,
 	    	};

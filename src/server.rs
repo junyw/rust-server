@@ -1,7 +1,7 @@
 use std::str;
 use std::os::unix::io::{RawFd, AsRawFd};
 use std::collections::HashMap;
-use std::net::{TcpListener, TcpStream, Shutdown};
+use std::net::{TcpListener, TcpStream, SocketAddr};
 use io::notification::{EventLoop, Handler, Identifier, Interest, EventSet};
 use std::io::{self, Read, Write};
 use ansi_term::Colour::*;
@@ -68,7 +68,7 @@ impl<T: Service>  Dispatcher<T> {
         
 
         event_loop.register(&identifier);
-        let client = Client::new(socket.as_raw_fd(), socket);
+        let client = Client::new(socket);
         //self.handle_request(&socket);
         self.connections.insert(client.as_raw_fd(), client);
       },
@@ -82,24 +82,25 @@ impl<T: Service>  Dispatcher<T> {
     //message.print();
     //add message to client's send_queue
     if ev_set.is_readable() {
-      let mut message: Message = self.connections.get_mut(&id).expect("dispatcher error").get_message(&id, &(ev_set.get_data() as u32));
+
       
       // if a socket is readable but there is nothing, it means the connection is closed;
-      if message.length() == 0 {
+      // if message.length() == 0 {
+      if ev_set.get_data() == 0 {
         let identifier = Identifier::new(id, Interest::Read);
         event_loop.deregister(&identifier);
         let identifier2 = Identifier::new(id, Interest::Write);
         event_loop.deregister(&identifier2);
 
-        //close(id);
-        {
-          let client = self.connections.get_mut(&id).unwrap();
-          client.shutdown();
-          println!("{} {}", Green.bold().paint("Close connection"), client.socket.peer_addr().unwrap());
-        }       
+        match self.connections.get_mut(&id).expect("Server getting client error").peer_addr() {
+          Some(addr) => println!("{} {}", Green.bold().paint("Close connection"), addr),
+          None => (),
+        }     
         self.connections.remove(&id);
 
       } else {
+        let message: Message = self.connections.get_mut(&id).expect("dispatcher error").get_message(&(ev_set.get_data() as u32));
+
         let return_message = self.service.ready(message.clone());
 
         self.connections.get_mut(&id).expect("dispatcher receive error").send_message(return_message);
@@ -161,25 +162,32 @@ impl<T: Service> Handler for Dispatcher<T> {
 // TODO: reimplement connections;
 // TODO: let connections manage reading message and writing message
 struct Client {
-    id: RawFd,
     socket: TcpStream,
     send_queue: Vec<Message>,
 }
 
 impl Client {
-    pub fn new(id: RawFd, sock: TcpStream) -> Client {
+    pub fn new(sock: TcpStream) -> Client {
         Client {
-            id: id,
             socket: sock,
             send_queue: Vec::with_capacity(1024),
         }
     }
+    pub fn peer_addr(&self) -> Option<SocketAddr> {
+      match self.socket.peer_addr() {
+        Ok(addr) => Some(addr),
+        Err(_) => {
+            //println!("Error getting peer addr from TcpStream: {:?}", why);
+            None
+        }
+      }
+    }
     pub fn as_raw_fd(&self) -> RawFd {
       self.socket.as_raw_fd()
     }
-    pub fn get_message(&mut self, id: &RawFd, len: &u32) -> Message {
+    pub fn get_message(&mut self, len: &u32) -> Message {
       let mut buffer = vec![0; *len as usize];
-      self.socket.read(&mut buffer[..]);
+      self.socket.read(&mut buffer[..]).expect("client read message error");
       Message {
         buf: buffer,
       }   
@@ -190,19 +198,19 @@ impl Client {
     pub fn write_message(&mut self) -> () {
       match self.send_queue.pop() {
         Some(message) => {
-          let mut buf:Vec<u8> = message.buf;
+          let buf:Vec<u8> = message.buf;
           self.socket.write_all(&buf[..]).expect("write message failure");
-          self.socket.flush();
+          self.socket.flush().expect("flush error");
         }
         None => (),
       }
-      // let mut message: Message = self.send_queue.pop().unwrap();
-      // let mut buf:Vec<u8> = message.buf;
-      // self.socket.write(&buf[..]);
     }
-    pub fn shutdown(&mut self) -> () {
-      self.socket.shutdown(Shutdown::Both);
-    }
+    // pub fn shutdown(&mut self) -> () {
+    //   match self.socket.shutdown(Shutdown::Both) {
+    //     Ok(_) => (),
+    //     Err(_) => (),
+    //   }
+    // }
 }
 
 #[derive(Clone)]

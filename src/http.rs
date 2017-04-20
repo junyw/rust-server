@@ -63,7 +63,7 @@ impl Request {
 			Some(text) => {
 				let re = Regex::new(r"(\D+)\s(.+)\s(HTTP/.+)\r").expect("parse http request error");
 				for cap in re.captures_iter(text) {
-				    println!("Method: {} URI: {} Version: {}", &cap[1], &cap[2], &cap[3]);
+				    // println!("Method: {} URI: {} Version: {}", &cap[1], &cap[2], &cap[3]);
 				    match &cap[1] {
 				    	"GET"  => self.method = Method::GET,
 				    	"POST" => self.method = Method::POST,
@@ -116,7 +116,7 @@ impl Response {
 	}
 	pub fn ok() -> Response {
 		match Response::new() {
-			Response {version: v, status: s, fields: f, body: b} => {
+			Response {version: v, fields: f, body: b, ..} => {
 				Response {
 					version: v,
 					status:  String::from("200 OK"),
@@ -128,7 +128,7 @@ impl Response {
 	}
 	pub fn not_found() -> Response {
 		match Response::new() {
-			Response {version: v, status: s, fields: f, body: b} => {
+			Response {version: v, fields: f, body: b, ..} => {
 				Response {
 					version: v,
 					status:  String::from("404 NOT FOUND"),
@@ -140,7 +140,7 @@ impl Response {
 	}
 	pub fn body(self, body: String) -> Response {
 		match self {
-			Response {version: v, status: s, fields:mut f, body: b} => {
+			Response {version: v, status: s, fields:mut f, ..} => {
 				f.insert("Content-Length".to_string(), body.len().to_string());
 				Response {
 					version: v,

@@ -1,8 +1,6 @@
-use http::{Request, Response, Method};
-use std::io::{self};
-use std::option;
-use regex::{Regex, RegexSet};
-use view::{View, NotFound, StaticPage};
+use http::{Response, Method};
+use regex::RegexSet;
+use view::{View, NotFound};
 #[test]
 fn it_works() {
 	let mut routerBuilder = RouterBuilder::new();
@@ -49,7 +47,7 @@ impl RouterBuilder {
 	pub fn build(self) -> Router {
 		// TODO: check duplicate/confilict routes
 		match self {
-			RouterBuilder {regexs: mut r, methods: mut m, views: mut v} => {
+			RouterBuilder {regexs: r, methods: m, views: v} => {
 				Router {
 					regexs: RegexSet::new(r).expect("regex set error"),
 					methods: m,
