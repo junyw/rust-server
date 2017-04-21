@@ -27,5 +27,5 @@ fn main() {
   server.run();
   
 }
-
+// benchmark with $ ./wrk -t2 -c100 -d5s  http://127.0.0.1:1300
 
