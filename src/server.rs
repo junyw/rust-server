@@ -78,8 +78,6 @@ impl<T: Service>  Dispatcher<T> {
 
   }
   fn receive(&mut self, id: RawFd, ev_set: EventSet, event_loop: &mut EventLoop) {
-    println!("connections size {:?}", self.connections.len());
-    //message.print();
     //add message to client's send_queue
     if ev_set.is_readable() {
 
@@ -199,7 +197,7 @@ impl Client {
 
 #[derive(Clone, Debug)]
 pub struct Message {
-  buf: Vec<u8>,
+  pub buf: Vec<u8>,
 }
 impl Message {
   pub fn new() -> Message {

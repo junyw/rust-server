@@ -3,6 +3,7 @@ extern crate ansi_term;
 extern crate regex;
 extern crate chrono;
 extern crate fnv;
+extern crate httparse;
 
 pub mod io;
 pub mod http;

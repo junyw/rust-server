@@ -27,8 +27,7 @@ impl Hello {
 impl Service for Hello {
   
   fn ready(&mut self, message: Message) -> Message {
-    let mut request = Request::new().expect("new request error");
-    request.parse(message.to_str());
+    let mut request = Request::parse(&message);
     
     // println!("Request Method and URI {:?} {:?}", request.method(), request.uri());
     self.router.response(request.method(), &request.uri()).to_message() 
