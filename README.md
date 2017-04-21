@@ -248,14 +248,6 @@ Figure 1 is an overview of the Carbon, the main components are:
 '' 
 
 ```
-### Rust as a language
-
-#### Ownership
-
-#### Lifetime
-
-#### Mutability
-
 ## Performance
 
 ## Limitations

@@ -41,7 +41,9 @@ impl Event {
 	pub fn is_error(&self) -> bool {
 		(self.kevent.flags.bits() & EV_ERROR.bits()) == EV_ERROR.bits()
 	}
-	pub fn is_hup(&self)  { //TODO: implement me }
+	pub fn is_hup(&self)  {
+		//TODO: implement me
+	}
 	pub fn ev_set_add(&mut self) {
 		self.kevent.flags = EV_ADD | EV_ENABLE;
 	}
