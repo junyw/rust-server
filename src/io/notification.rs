@@ -26,7 +26,6 @@ use std::io::{self};
 use nix::sys::event::{KEvent, kqueue, kevent, EventFilter};
 //use nix::sys::event::{EV_ADD, EV_ENABLE, EV_DELETE, EV_CLEAR, EV_ONESHOT, EV_ERROR};
 use std::os::unix::io::RawFd;
-
 use io::event::Event;
 
 pub trait Handler {

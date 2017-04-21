@@ -22,8 +22,7 @@ impl Event {
 		} else {
 			panic!("");
 		}
-   		
-	} 
+	}
 	pub fn new_from_kevent(kevent: KEvent) -> Event {
 		Event {
 			kevent: kevent,
@@ -36,16 +35,13 @@ impl Event {
 	pub fn is_readable(&self) -> bool {
 		self.kevent.filter == EventFilter::EVFILT_READ
 	}		
-
 	pub fn is_writable(&self) -> bool {
 		self.kevent.filter == EventFilter::EVFILT_WRITE
 	}
 	pub fn is_error(&self) -> bool {
 		(self.kevent.flags.bits() & EV_ERROR.bits()) == EV_ERROR.bits()
 	}
-	pub fn is_hup(&self)  {
-		//TODO: implement me
-	}
+	pub fn is_hup(&self)  { //TODO: implement me }
 	pub fn ev_set_add(&mut self) {
 		self.kevent.flags = EV_ADD | EV_ENABLE;
 	}
