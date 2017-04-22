@@ -252,6 +252,10 @@ Figure 1 is an overview of the Carbon, the main components are:
 
 ## Limitations
 
+* Exceptional speed in crude status of a server is only a start
+* `kqueue` is not portable
+* Support for databases needs to be implemented
+
 ### Linux support to be implemented
 
 ## Resources
