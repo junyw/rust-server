@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<meta charset="utf-8" />
+		<link rel="stylesheet" type="text/css" href="rust-as-a-lang/css/style.css" />
+		<title>Rust as a language</title>
+	</head>
+<body>
+<h3>Rust as a language</h3>
+
+<p>The idea of Rust-lang is to provide safety for system programming.(although its also</p>
+
+<p>a general purpose language). To achieve this the following features are introduced.</p>
+
+<h4>Ownership</h4>
+
+<p>Variable bindings in <code>Rust</code> has a special feature <code>ownership</code>, which prevents </p>
+
+<p>unauthorized reuse of variables. </p>
+
+<p>For example:</p>
+
+<pre><code>let v = vec![1,2,3];
+let v2 = v;
+</code></pre>
+
+<p>In the above case, by binding <code>v2</code> with <code>v</code>, we have <code>transfered</code> the ownership </p>
+
+<p>of <code>vec![1,2,3]</code> to v2. Therefore any subsequent use of <code>v</code> would be illegal.</p>
+
+<p>This requires programmer to explicitly decide whether to <code>borrow</code>(by using <code>&amp;</code></p>
+
+<p>to reference) a variable or</p>
+
+<p><code>consume</code> one. </p>
+
+<h4>Lifetime</h4>
+
+<p>The concept of <code>Lifetime</code> of a variable is introduced to avoid problems such as</p>
+
+<p><code>dangling pointer</code>. </p>
+
+<p>Consider the syntax:</p>
+
+<pre><code>fn rule(self, method: Method, uri: &amp;&#39;static str, view: Box&lt;View&gt;) -&gt; RouterBuilder {
+match self {
+RouterBuilder {regexs: mut r, methods: mut m, views: mut v} =&gt; {
+r.push(uri);
+m.push(method);
+v.push(view);
+
+RouterBuilder {
+regexs: r,
+methods: m,
+views: v,
+}
+}
+}
+}
+</code></pre>
+
+<p>Here the <code>&amp;&#39;static str</code> specifies that the str should have <code>&#39;static</code> lifetime, which</p>
+
+<p>will survive throughout the program.</p>
+
+<pre><code>fn skip_prefix&lt;a&#39;, &#39;b&gt;(line: &amp;a&#39; str, prefix: &amp;b&#39; str) -&gt; &amp;a&#39; str {
+}
+</code></pre>
+
+<p>Another case of lifetime usage, where a function takes variables with different lifetime. </p>
+
+</body>
+</html>
+
