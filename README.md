@@ -10,19 +10,19 @@ to be notified when any of the events in the k-queue happens or holds a conditio
 
 Architecture overview
 
-```aidl
-'' extern crate nix;
-'' extern crate ansi_term;
-'' extern crate regex;
-'' extern crate chrono;
-'' extern crate fnv;
-'' 
-'' pub mod io; 
-'' pub mod http;
-'' pub mod server;
-'' pub mod service;
-'' pub mod router;
-'' pub mod view;
+```rust
+extern crate nix;
+extern crate ansi_term;
+extern crate regex;
+extern crate chrono;
+extern crate fnv;
+
+pub mod io; 
+pub mod http;
+pub mod server;
+pub mod service;
+pub mod router;
+pub mod view;
 
 ```
 
@@ -41,211 +41,205 @@ Figure 1 is an overview of the Carbon, the main components are:
 
 #### Event is a vehicle for kevents 
 
-```aidl
-'' use nix::sys::event::{KEvent, EventFilter, FilterFlag};
-'' use nix::sys::event::{EV_ADD, EV_ENABLE, EV_DELETE, EV_ERROR};
-'' use std::os::unix::io::RawFd;
-'' 
-'' use io::notification::Identifier;
-'' pub struct Event {
-'' 	pub kevent: KEvent,
-'' }
-'' impl Event {
-'' 	pub fn new(id: &Identifier) -> Event {} 
-'' 	pub fn new_from_kevent(kevent: KEvent) -> Event {}
-'' 	pub fn get_data(&self) -> u32 {}
-'' 	pub fn is_readable(&self) -> bool {}		
-'' 	pub fn is_writable(&self) -> bool {}
-'' 	pub fn is_error(&self) -> bool {}
-'' 	pub fn is_hup(&self)  {}
-'' 	pub fn ev_set_add(&mut self) {}
-'' 	pub fn ev_set_write(&mut self) {}
-'' 	pub fn ev_set_delete(&mut self) {}
-'' 	fn new_kevent(id: & RawFd) -> KEvent {}
-'' 	pub fn new_timer_event(id: usize, timer: isize) -> Event {}
-'' }
+```rust
+use nix::sys::event::{KEvent, EventFilter, FilterFlag};
+use nix::sys::event::{EV_ADD, EV_ENABLE, EV_DELETE, EV_ERROR};
+use std::os::unix::io::RawFd;
+
+use io::notification::Identifier;
+pub struct Event {
+	pub kevent: KEvent,
+}
+impl Event {
+	pub fn new(id: &Identifier) -> Event {} 
+	pub fn new_from_kevent(kevent: KEvent) -> Event {}
+	pub fn get_data(&self) -> u32 {}
+	pub fn is_readable(&self) -> bool {}		
+	pub fn is_writable(&self) -> bool {}
+	pub fn is_error(&self) -> bool {}
+	pub fn is_hup(&self)  {}
+	pub fn ev_set_add(&mut self) {}
+	pub fn ev_set_write(&mut self) {}
+	pub fn ev_set_delete(&mut self) {}
+	fn new_kevent(id: & RawFd) -> KEvent {}
+	pub fn new_timer_event(id: usize, timer: isize) -> Event {}
+}
 
 ```
 
 #### Notification provide an `EventLoop` and `Handler` to produce `Events` and perform Asynchronous request/response
 
-```aidl
-'' pub trait Handler {
-''     fn ready(&mut self, id:RawFd, ev_set : EventSet, event_loop : &mut EventLoop);
-'' }
-'' 
-'' pub struct EventLoop {
-'' 	kqueue: RawFd,
-'' 	// ev_list is used for retrival
-'' 	ev_list: Vec<KEvent>,
-'' }
-'' impl EventLoop {
-'' 	pub fn new() -> io::Result<EventLoop> {}
-'' 	fn ev_register(&self, event: Event) {}
-'' 	pub fn register(&self, id: &Identifier) {}
-'' 	pub fn reregister() {}
-'' 	pub fn deregister(&self, id: &Identifier) {}
-'' 	pub fn run<H: Handler>(&mut self, handler: &mut H) {}
-'' 	fn poll<H: Handler>(&mut self, handler: &mut H) {}
-'' }
-'' 
-'' pub struct Identifier {
-'' 	fd: RawFd,
-'' 	filter: Interest,
-'' }
-'' impl Identifier {
-'' 	pub fn new(fd: RawFd, interest: Interest) -> Identifier{}
-'' 	pub fn get_fd(&self) -> RawFd {}
-'' 	pub fn readable(&self) -> bool {}
-'' 	pub fn writable(&self) -> bool {}
-'' 
-'' pub enum Interest {
-''     Read,
-''     Write,
-'' }
-'' pub struct EventSet(usize, usize);
-'' impl EventSet {
-'' 	pub fn new() -> EventSet {}
-'' 	pub fn readable() -> EventSet {}
-'' 	pub fn writable() -> EventSet {}
-'' 	pub fn set_data(&mut self, data :usize) {}
-'' 	pub fn get_data(&self) -> usize {}
-'' 	pub fn is_readable(&self) -> bool {}
-'' 	pub fn is_writable(&self) -> bool {}
-'' }
-''  
+```rust
+pub trait Handler {
+    fn ready(&mut self, id:RawFd, ev_set : EventSet, event_loop : &mut EventLoop);
+}
+pub struct EventLoop {
+	kqueue: RawFd,
+	// ev_list is used for retrival
+	ev_list: Vec<KEvent>,
+}
+impl EventLoop {
+	pub fn new() -> io::Result<EventLoop> {}
+	fn ev_register(&self, event: Event) {}
+	pub fn register(&self, id: &Identifier) {}
+	pub fn reregister() {}
+	pub fn deregister(&self, id: &Identifier) {}
+	pub fn run<H: Handler>(&mut self, handler: &mut H) {}
+	fn poll<H: Handler>(&mut self, handler: &mut H) {}
+}
+pub struct Identifier {
+	fd: RawFd,
+	filter: Interest,
+}
+impl Identifier {
+	pub fn new(fd: RawFd, interest: Interest) -> Identifier{}
+	pub fn get_fd(&self) -> RawFd {}
+	pub fn readable(&self) -> bool {}
+	pub fn writable(&self) -> bool {}
+pub enum Interest {
+    Read,
+    Write,
+}
+pub struct EventSet(usize, usize);
+impl EventSet {
+	pub fn new() -> EventSet {}
+	pub fn readable() -> EventSet {}
+	pub fn writable() -> EventSet {}
+	pub fn set_data(&mut self, data :usize) {}
+	pub fn get_data(&self) -> usize {}
+	pub fn is_readable(&self) -> bool {}
+	pub fn is_writable(&self) -> bool {}
+}
 
 ```
 
 
 ### Router provides rules for handle request and query resources
 
-```aidl
-'' pub struct RouterBuilder {
-'' 	regexs: Vec<&'static str>,
-'' 	methods: Vec<Method>,
-'' 	views: Vec<Box<View>>,
-'' }
-'' impl RouterBuilder {
-'' 	pub fn new() -> RouterBuilder {}
-'' 	fn rule(self, method: Method, uri: &'static str, view: Box<View>) -> RouterBuilder {}
-'' 	pub fn get(self, uri: &'static str, view: Box<View>) -> RouterBuilder {}
-'' 	pub fn post(self, uri: &'static str, view: Box<View>) -> RouterBuilder {}
-'' 	pub fn build(self) -> Router {}
-'' }
-'' 
-'' pub struct Router  {
-'' 	regexs: RegexSet,
-'' 	methods: Vec<Method>,
-'' 	views: Vec<Box<View>>,
-'' 	cache: FnvHashMap<String, String>,
-'' }
-'' impl Router {
-'' 	pub fn response(&mut self, method: Method, path: &str) -> Response {
-'' 		}
-'' 	}
-'' 	fn route(&self, method: Method, path: &str) -> Option<usize> {}
-'' }
+```rust
+pub struct RouterBuilder {
+	regexs: Vec<&'static str>,
+	methods: Vec<Method>,
+	views: Vec<Box<View>>,
+}
+impl RouterBuilder {
+	pub fn new() -> RouterBuilder {}
+	fn rule(self, method: Method, uri: &'static str, view: Box<View>) -> RouterBuilder {}
+	pub fn get(self, uri: &'static str, view: Box<View>) -> RouterBuilder {}
+	pub fn post(self, uri: &'static str, view: Box<View>) -> RouterBuilder {}
+	pub fn build(self) -> Router {}
+}
 
+pub struct Router  {
+	regexs: RegexSet,
+	methods: Vec<Method>,
+	views: Vec<Box<View>>,
+	cache: FnvHashMap<String, String>,
+}
+impl Router {
+	pub fn response(&mut self, method: Method, path: &str) -> Response {
+		}
+	}
+	fn route(&self, method: Method, path: &str) -> Option<usize> {}
+}
 
 ```
 ### Service provides a bootstrap `trait` `Service`
 
-```aidl
-'' pub trait Service {}
-'' 
+```rust
+pub trait Service {}
 
 ```
 
 ### View loads resources
 
-```aidl
-'' pub trait View {
-''     fn render(&self, cache: &mut FnvHashMap<String, String>) -> Response;
-'' }
-'' 
-'' pub struct NotFound;
-'' impl View for NotFound {
-'' 	fn render(&self, cache: &mut FnvHashMap<String, String>) -> Response {}
-'' }
-'' pub struct Page {
-'' 	url: PathBuf,
-'' }
-'' impl Page {
-'' 	pub fn new(path: &'static str) -> Page {}
-'' }
-'' impl View for Page {
-'' 	fn render(&self, cache: &mut FnvHashMap<String, String>) -> Response {}
-'' }
+```rust
+pub trait View {
+    fn render(&self, cache: &mut FnvHashMap<String, String>) -> Response;
+}
+
+pub struct NotFound;
+impl View for NotFound {
+	fn render(&self, cache: &mut FnvHashMap<String, String>) -> Response {}
+}
+pub struct Page {
+	url: PathBuf,
+}
+impl Page {
+	pub fn new(path: &'static str) -> Page {}
+}
+impl View for Page {
+	fn render(&self, cache: &mut FnvHashMap<String, String>) -> Response {}
+}
 
 ```
 
 ### Server binds connection ports and handles request
 
-```aidl
-'' pub struct Server<T: Service> {
-''   event_loop: EventLoop,
-''   dispatcher: Dispatcher<T>,
-'' } 
-'' 
-'' impl<T: Service> Server<T> {
-''   pub fn new(tcp: TcpListener, service: T) -> Server<T> {
-''     Server {}
-''   }
-''   fn initialize(&mut self) {}
-''   pub fn run(&mut self) {}
-'' }
-'' pub struct Dispatcher<T: Service> {
-''   id: RawFd,
-''   listener: TcpListener,
-''   // callbacks?
-''   connections: FnvHashMap<RawFd, Client>,  // server needs to maintain a list of accepted connections
-''   service: T,
-'' }
-'' 
-'' impl<T: Service>  Dispatcher<T> {
-''   pub fn new(tcp: TcpListener, service: T) -> Dispatcher<T> {}
-''   pub fn as_raw_fd(&self) -> RawFd {}
-'' 
-''   // Accept a new client connection.
-''   fn accept(&mut self, event_loop: &mut EventLoop) {}
-''   fn receive(&mut self, id: RawFd, ev_set: EventSet, event_loop: &mut EventLoop) {}
-'' }
-'' 
-'' impl<T: Service> Handler for Dispatcher<T> {
-''     fn ready(&mut self, id: RawFd, ev_set: EventSet, event_loop: &mut EventLoop) {}
-'' }
-'' struct Client {
-''     socket: TcpStream,
-''     send_queue: Vec<Message>,
-'' }
-'' 
-'' impl Client {
-''     pub fn new(sock: TcpStream) -> Client {}
-''     pub fn peer_addr(&self) -> Option<SocketAddr> {}
-''     pub fn as_raw_fd(&self) -> RawFd {}
-''     pub fn get_message(&mut self, len: &u32) -> Message {}
-''     pub fn send_message(&mut self, message: Message) -> () {}
-''     pub fn write_message(&mut self) -> () {}
-'' 
-'' #[derive(Clone, Debug)]
-'' pub struct Message {
-''   pub buf: Vec<u8>,
-'' }
-'' impl Message {
-''   pub fn new() -> Message {}
-'' 
-''   pub fn length(&self) -> usize {}
-''   pub fn from_sock(&mut self, sock: &mut TcpStream, len: u32) {}
-''   pub fn to_str(&self) -> &str {}
-''   pub fn print(&self) {}
-'' }
-'' 
-'' impl Write for Message {
-''    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {}
-''    fn flush(&mut self) -> io::Result<()> {}
-'' }
-'' 
+```rust
+pub struct Server<T: Service> {
+  event_loop: EventLoop,
+  dispatcher: Dispatcher<T>,
+} 
+
+impl<T: Service> Server<T> {
+  pub fn new(tcp: TcpListener, service: T) -> Server<T> {
+    Server {}
+  }
+  fn initialize(&mut self) {}
+  pub fn run(&mut self) {}
+}
+pub struct Dispatcher<T: Service> {
+  id: RawFd,
+  listener: TcpListener,
+  // callbacks?
+  connections: FnvHashMap<RawFd, Client>,  // server needs to maintain a list of accepted connections
+  service: T,
+}
+
+impl<T: Service>  Dispatcher<T> {
+  pub fn new(tcp: TcpListener, service: T) -> Dispatcher<T> {}
+  pub fn as_raw_fd(&self) -> RawFd {}
+
+  // Accept a new client connection.
+  fn accept(&mut self, event_loop: &mut EventLoop) {}
+  fn receive(&mut self, id: RawFd, ev_set: EventSet, event_loop: &mut EventLoop) {}
+}
+
+impl<T: Service> Handler for Dispatcher<T> {
+    fn ready(&mut self, id: RawFd, ev_set: EventSet, event_loop: &mut EventLoop) {}
+}
+struct Client {
+    socket: TcpStream,
+    send_queue: Vec<Message>,
+}
+
+impl Client {
+    pub fn new(sock: TcpStream) -> Client {}
+    pub fn peer_addr(&self) -> Option<SocketAddr> {}
+    pub fn as_raw_fd(&self) -> RawFd {}
+    pub fn get_message(&mut self, len: &u32) -> Message {}
+    pub fn send_message(&mut self, message: Message) -> () {}
+    pub fn write_message(&mut self) -> () {}
+
+#[derive(Clone, Debug)]
+pub struct Message {
+  pub buf: Vec<u8>,
+}
+impl Message {
+  pub fn new() -> Message {}
+
+  pub fn length(&self) -> usize {}
+  pub fn from_sock(&mut self, sock: &mut TcpStream, len: u32) {}
+  pub fn to_str(&self) -> &str {}
+  pub fn print(&self) {}
+}
+
+impl Write for Message {
+   fn write(&mut self, buf: &[u8]) -> io::Result<usize> {}
+   fn flush(&mut self) -> io::Result<()> {}
+}
+
 
 ```
 ## Performance
