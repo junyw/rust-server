@@ -9,10 +9,7 @@ struct Echo;
 impl Service for Echo {
   
   fn ready(&mut self, message: Message) -> Message {
-    //println!("{}",message.to_str());
     let mut response = Message::new();
-    // let mut request = Request::new().unwrap();
-    // request.parse(message.to_str());
     response.write(b"HTTP/1.1 200 OK\nContent-Length: 39\n\n<html><body>Hello, World!</body></html>").unwrap();
     response
   } 

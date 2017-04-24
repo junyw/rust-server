@@ -244,20 +244,55 @@ impl Write for Message {
 ```
 ## Performance
 
+MacBook Pro (13-inch, 2016) 2.9 GHz Intel Core i5
+benchmarked with [wrk](https://github.com/wg/wrk) on localhost
 ```
 ------------------------------------------------------------------
-node.js                                                           |
-                                                                  | 
-Running 5s test @ http://127.0.0.1:8000/                          |
-  2 threads and 200 connections                                   |
-  Thread Stats   Avg      Stdev     Max   +/- Stdev               |
-    Latency    10.74ms    3.29ms  74.18ms   97.53%                |
-    Req/Sec     9.35k     1.26k   10.03k    95.00%                |
-  93035 requests in 5.01s, 13.84MB read                           |
-  Socket errors: connect 0, read 131, write 0, timeout 0          |
-Requests/sec:  18580.64                                           |
-Transfer/sec:      2.76MB                                         |
+**this work**
+
+Running 5s test @ http://127.0.0.1:1300
+  2 threads and 100 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency     1.22ms  164.79us  11.18ms   90.19%
+    Req/Sec    41.05k     5.06k   90.13k    98.02%
+  412423 requests in 5.10s, 29.50MB read
+Requests/sec:  80860.18
+Transfer/sec:      5.78MB
+
+------------------------------------------------------------------
+**Node.js v6.10.0**                                                         
+                                                                  
+Running 5s test @ http://127.0.0.1:8000/
+  2 threads and 100 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency     5.41ms    1.15ms  37.93ms   93.59%
+    Req/Sec     9.34k     0.97k   10.15k    91.00%
+  92965 requests in 5.00s, 13.83MB read
+Requests/sec:  18583.21
+Transfer/sec:      2.76MB
 -------------------------------------------------------------------
+**Go 1.8.1** 
+Running 5s test @ http://127.0.0.1:80
+  2 threads and 100 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency     1.29ms    1.55ms  36.17ms   94.34%
+    Req/Sec    35.73k     9.74k   63.00k    67.00%
+  356359 requests in 5.02s, 55.62MB read
+Requests/sec:  70932.78
+Transfer/sec:     11.07MB
+
+-------------------------------------------------------------------
+**This work (pipelined)** 
+Running 5s test @ http://127.0.0.1:1300
+  2 threads and 100 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency     0.89ms  442.31us  12.86ms   52.73%
+    Req/Sec   724.88k    48.60k  783.08k    69.00%
+  7207000 requests in 5.00s, 515.48MB read
+Requests/sec: 1440922.77
+Transfer/sec:    103.06MB
+-------------------------------------------------------------------
+
 ```
 ## Limitations
 
@@ -268,3 +303,7 @@ Transfer/sec:      2.76MB                                         |
 ### Linux support to be implemented
 
 ## Resources
+
+Benchmark 
+Nodejs: https://howtonode.org/hello-node
+Go: https://github.com/geetarista/go-http-hello-world/blob/master/hello_world/hello_world.go
