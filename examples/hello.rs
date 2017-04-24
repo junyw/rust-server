@@ -18,8 +18,9 @@ impl Hello {
   pub fn new() -> Hello {
     Hello {
       router: RouterBuilder::new()
-                .get(r"/$", Box::new(Page::new(r"examples/index.html")))
+                .get(r"/$", Box::new(Page::new(r"assets/index.html")))
                 .get(r"/info$", Box::new(Page::new(r"examples/info.html")))
+                .get(r"/css/style.css$", Box::new(Page::new(r"assets/css/style.css")))
                 .build(),
     }
   }
@@ -35,13 +36,13 @@ impl Service for Hello {
   } 
 }
 fn main() {
-  let listener = TcpListener::bind("127.0.0.1:1300").expect("tcp listener error");
+  let listener = TcpListener::bind("192.168.0.31:1300").expect("tcp listener error");
   
   let service = Hello::new();
 
   let mut server = Server::new(listener, service);
   
-  println!("{} http://127.0.0.1:1300", Blue.bold().paint("Open"));
+  println!("{} http://192.168.0.31:1300", Blue.bold().paint("Open"));
   
   server.run();
 
