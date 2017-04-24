@@ -249,6 +249,17 @@ Figure 1 is an overview of the Carbon, the main components are:
 
 ```
 ## Performance
+node.js
+
+Running 5s test @ http://127.0.0.1:8000/
+  2 threads and 200 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    10.74ms    3.29ms  74.18ms   97.53%
+    Req/Sec     9.35k     1.26k   10.03k    95.00%
+  93035 requests in 5.01s, 13.84MB read
+  Socket errors: connect 0, read 131, write 0, timeout 0
+Requests/sec:  18580.64
+Transfer/sec:      2.76MB
 
 ## Limitations
 
