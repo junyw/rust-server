@@ -112,68 +112,6 @@ impl EventSet {
 }
 
 ```
-
-
-### Router provides rules for handle request and query resources
-
-```rust
-pub struct RouterBuilder {
-	regexs: Vec<&'static str>,
-	methods: Vec<Method>,
-	views: Vec<Box<View>>,
-}
-impl RouterBuilder {
-	pub fn new() -> RouterBuilder {}
-	fn rule(self, method: Method, uri: &'static str, view: Box<View>) -> RouterBuilder {}
-	pub fn get(self, uri: &'static str, view: Box<View>) -> RouterBuilder {}
-	pub fn post(self, uri: &'static str, view: Box<View>) -> RouterBuilder {}
-	pub fn build(self) -> Router {}
-}
-
-pub struct Router  {
-	regexs: RegexSet,
-	methods: Vec<Method>,
-	views: Vec<Box<View>>,
-	cache: FnvHashMap<String, String>,
-}
-impl Router {
-	pub fn response(&mut self, method: Method, path: &str) -> Response {
-		}
-	}
-	fn route(&self, method: Method, path: &str) -> Option<usize> {}
-}
-
-```
-### Service provides a bootstrap `trait` `Service`
-
-```rust
-pub trait Service {}
-
-```
-
-### View loads resources
-
-```rust
-pub trait View {
-    fn render(&self, cache: &mut FnvHashMap<String, String>) -> Response;
-}
-
-pub struct NotFound;
-impl View for NotFound {
-	fn render(&self, cache: &mut FnvHashMap<String, String>) -> Response {}
-}
-pub struct Page {
-	url: PathBuf,
-}
-impl Page {
-	pub fn new(path: &'static str) -> Page {}
-}
-impl View for Page {
-	fn render(&self, cache: &mut FnvHashMap<String, String>) -> Response {}
-}
-
-```
-
 ### Server binds connection ports and handles request
 
 ```rust
@@ -240,8 +178,68 @@ impl Write for Message {
    fn flush(&mut self) -> io::Result<()> {}
 }
 
+```
+
+### Router provides rules for handle request and query resources
+
+```rust
+pub struct RouterBuilder {
+	regexs: Vec<&'static str>,
+	methods: Vec<Method>,
+	views: Vec<Box<View>>,
+}
+impl RouterBuilder {
+	pub fn new() -> RouterBuilder {}
+	fn rule(self, method: Method, uri: &'static str, view: Box<View>) -> RouterBuilder {}
+	pub fn get(self, uri: &'static str, view: Box<View>) -> RouterBuilder {}
+	pub fn post(self, uri: &'static str, view: Box<View>) -> RouterBuilder {}
+	pub fn build(self) -> Router {}
+}
+
+pub struct Router  {
+	regexs: RegexSet,
+	methods: Vec<Method>,
+	views: Vec<Box<View>>,
+	cache: FnvHashMap<String, String>,
+}
+impl Router {
+	pub fn response(&mut self, method: Method, path: &str) -> Response {
+		}
+	}
+	fn route(&self, method: Method, path: &str) -> Option<usize> {}
+}
 
 ```
+### Service provides a bootstrap `trait` `Service`
+
+```rust
+pub trait Service {}
+
+```
+
+### View loads resources
+
+```rust
+pub trait View {
+    fn render(&self, cache: &mut FnvHashMap<String, String>) -> Response;
+}
+
+pub struct NotFound;
+impl View for NotFound {
+	fn render(&self, cache: &mut FnvHashMap<String, String>) -> Response {}
+}
+pub struct Page {
+	url: PathBuf,
+}
+impl Page {
+	pub fn new(path: &'static str) -> Page {}
+}
+impl View for Page {
+	fn render(&self, cache: &mut FnvHashMap<String, String>) -> Response {}
+}
+
+```
+
 ## Performance
 
 MacBook Pro (13-inch, 2016) 2.9 GHz Intel Core i5
@@ -294,6 +292,67 @@ Transfer/sec:    103.06MB
 -------------------------------------------------------------------
 
 ```
+
+### Rust as a language
+
+The idea of Rust-lang is to provide safety for system programming.(although its also
+a general purpose language). To achieve this the following features are introduced.
+
+#### Ownership
+
+Variable bindings in `Rust` has a special feature `ownership`, which prevents 
+unauthorized reuse of variables. 
+
+For example:
+
+```rust
+let v = vec![1,2,3];
+let v2 = v;
+```
+
+In the above case, by binding `v2` with `v`, we have `transfered` the ownership 
+of `vec![1,2,3]` to v2. Therefore any subsequent use of `v` would be illegal.
+
+This requires programmer to explicitly decide whether to `borrow`(by using `&`
+to reference) a variable or
+`consume` one. 
+
+#### Lifetime
+
+The concept of `Lifetime` of a variable is introduced to avoid problems such as
+`dangling pointer`. 
+
+Consider the syntax:
+
+```rust
+	fn rule(self, method: Method, uri: &'static str, view: Box<View>) -> RouterBuilder {
+		match self {
+			RouterBuilder {regexs: mut r, methods: mut m, views: mut v} => {
+				r.push(uri);
+				m.push(method);
+				v.push(view);
+
+				RouterBuilder {
+					regexs: r,
+					methods: m,
+					views: v,
+				}
+			}
+		}
+	}
+```
+
+Here the `&'static str` specifies that the str should have `'static` lifetime, which
+will survive throughout the program.
+
+```rust
+fn skip_prefix<a', 'b>(line: &a' str, prefix: &b' str) -> &a' str {
+}
+```
+
+Another case of lifetime usage, where a function takes variables with different lifetime. 
+
+
 ## Limitations
 
 * Exceptional speed in crude status of a server is only a start
