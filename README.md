@@ -325,21 +325,21 @@ The concept of `Lifetime` of a variable is introduced to avoid problems such as
 Consider the syntax:
 
 ```rust
-	fn rule(self, method: Method, uri: &'static str, view: Box<View>) -> RouterBuilder {
-		match self {
-			RouterBuilder {regexs: mut r, methods: mut m, views: mut v} => {
-				r.push(uri);
-				m.push(method);
-				v.push(view);
+fn rule(self, method: Method, uri: &'static str, view: Box<View>) -> RouterBuilder {
+	match self {
+		RouterBuilder {regexs: mut r, methods: mut m, views: mut v} => {
+			r.push(uri);
+			m.push(method);
+			v.push(view);
 
-				RouterBuilder {
-					regexs: r,
-					methods: m,
-					views: v,
-				}
+			RouterBuilder {
+				regexs: r,
+				methods: m,
+				views: v,
 			}
 		}
 	}
+}
 ```
 
 Here the `&'static str` specifies that the str should have `'static` lifetime, which
