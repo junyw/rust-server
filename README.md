@@ -326,19 +326,19 @@ Consider the syntax:
 
 ```rust
 fn rule(self, method: Method, uri: &'static str, view: Box<View>) -> RouterBuilder {
-	match self {
-		RouterBuilder {regexs: mut r, methods: mut m, views: mut v} => {
-			r.push(uri);
-			m.push(method);
-			v.push(view);
+    match self {
+        RouterBuilder {regexs: mut r, methods: mut m, views: mut v} => {
+            r.push(uri);
+            m.push(method);
+            v.push(view);
 
-			RouterBuilder {
-				regexs: r,
-				methods: m,
-				views: v,
-			}
-		}
-	}
+            RouterBuilder {
+                regexs: r,
+                methods: m,
+                views: v,
+            }
+        }
+    }
 }
 ```
 
